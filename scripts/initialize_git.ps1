@@ -1,4 +1,4 @@
-param([string]$RemoteUrl = "")
+param([string]$RemoteUrl = "https://github.com/allcleancenter2024-gif/sermon-lmstudio-v1_6.git")
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot

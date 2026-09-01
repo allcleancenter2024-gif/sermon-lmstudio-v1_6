@@ -565,4 +565,3 @@ curl http://127.0.0.1:12345/v1/models
 ```
 
 모델 목록 JSON이 나오면 LM Studio 로컬 API가 동작 중입니다.
->>>>>>> 4060e4d (Add GitHub readiness and reliable test runner)

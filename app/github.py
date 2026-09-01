@@ -14,11 +14,17 @@ from urllib.parse import urlparse
 from app.repositories.settings import DB_PATH, get_json, set_json
 
 GITHUB_SETTING_KEY = "github_repository_url"
+DEFAULT_GITHUB_REPOSITORY_URL = "https://github.com/allcleancenter2024-gif/sermon-lmstudio-v1_6"
 
 
 def get_github_repository_url(db_path: Path = DB_PATH) -> str:
     value = get_json(GITHUB_SETTING_KEY, db_path)
-    return str(value).strip() if value else ""
+    configured = str(value).strip() if value else ""
+    if not configured or configured.rstrip("/").lower() == "https://github.com/keunho2025/sermon-lmstudio-v1_6":
+        if configured != DEFAULT_GITHUB_REPOSITORY_URL:
+            set_json(GITHUB_SETTING_KEY, DEFAULT_GITHUB_REPOSITORY_URL, db_path)
+        return DEFAULT_GITHUB_REPOSITORY_URL
+    return configured
 
 
 def normalize_github_repository_url(value: str) -> str:
