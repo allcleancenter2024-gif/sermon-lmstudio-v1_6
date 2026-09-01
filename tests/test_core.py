@@ -122,7 +122,7 @@ class CoreTests(unittest.TestCase):
         system, user = build_resize_prompt("짧은 설교", 20, rows)
         self.assertIn("새로운 성경 인용", system)
         self.assertIn("TEST | 테스트 1:1", user)
-        for minutes in (15, 20, 25, 30, 40):
+        for minutes in (15, 20, 25, 30):
             _, personalized = build_resize_prompt("짧은 설교", minutes, rows, 300)
             self.assertIn("300자/분", personalized)
             self.assertIn(f"{minutes * 300}자", personalized)
@@ -398,7 +398,9 @@ class CoreTests(unittest.TestCase):
             self.assertTrue({"sermon.md", "dashboard.html", "sermon.docx", "study_note.md", "sermon_outline.json", "manifest.json"}.issubset(names))
 
     def test_v10_fifteen_minutes_is_an_official_api_duration(self):
-        self.assertEqual(SUPPORTED_SERMON_MINUTES, (15, 20, 25, 30, 40))
+        self.assertEqual(SUPPORTED_SERMON_MINUTES, (15, 20, 25, 30))
+        with self.assertRaises(ValueError):
+            sermon_time_plan(40)
         self.assertEqual(DEFAULT_SERMON_MINUTES, 15)
         rows = search_passages("테스트", db_path=self.db)
         _, prompt = build_sermon_prompt({"topic": "평안", "minutes": 15, "reading_cpm": 300}, rows)

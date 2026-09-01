@@ -7,7 +7,7 @@ configuration and provider modules without creating a dependency on app.core.
 import re
 
 
-SUPPORTED_SERMON_MINUTES = (15, 20, 25, 30, 40)
+SUPPORTED_SERMON_MINUTES = (15, 20, 25, 30)
 DEFAULT_SERMON_MINUTES = 15
 DEFAULT_LMSTUDIO_URL = "http://127.0.0.1:12345/v1"
 LEGACY_LMSTUDIO_URL = "http://127.0.0.1:1234/v1"

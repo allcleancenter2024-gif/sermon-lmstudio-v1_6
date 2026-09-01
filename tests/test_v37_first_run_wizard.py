@@ -13,7 +13,7 @@ class V37FirstRunWizardTests(unittest.TestCase):
         self.assertEqual(config["version"], 40)
         self.assertEqual(config["app_version"], "40.9.10")
         self.assertEqual(config["default_minutes"], 15)
-        self.assertEqual(config["minutes"], [15, 20, 25, 30, 40])
+        self.assertEqual(config["minutes"], [15, 20, 25, 30])
 
     def test_first_run_wizard_has_single_next_action(self):
         html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
