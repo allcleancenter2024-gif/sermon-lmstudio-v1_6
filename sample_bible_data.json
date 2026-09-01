@@ -1,0 +1,16 @@
+[
+  {
+    "translation": "YOUR-LICENSED-TRANSLATION",
+    "language": "ko",
+    "reference": "책이름 1:1",
+    "text": "사용 권한을 확인한 성경 본문을 여기에 입력하세요.",
+    "license_note": "사용 허가 또는 라이선스 정보를 기록하세요."
+  },
+  {
+    "translation": "Hebrew-or-Greek-Source",
+    "language": "he",
+    "reference": "책이름 1:1",
+    "text": "허가된 원어 본문 또는 어휘 자료",
+    "license_note": "자료 출처와 라이선스"
+  }
+]

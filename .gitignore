@@ -1,0 +1,17 @@
+# Local Python environments and generated caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-*/
+.test-runs/
+
+# Local build and packaging output
+build/
+dist/
+
+# Local credentials and large/private runtime databases
+auth.sqlite3
+data/bible.db
+
+# Keep user data documentation, backups, exports, and source files versionable by default.

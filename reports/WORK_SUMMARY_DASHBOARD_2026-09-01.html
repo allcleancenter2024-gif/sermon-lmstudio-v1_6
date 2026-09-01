@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sermon LM Studio 작업 종합 대시보드 · 2026-09-01</title>
+  <style>
+    :root{color-scheme:light;--ink:#172033;--muted:#667085;--line:#e5e7eb;--bg:#f6f8fb;--card:#fff;--ok:#087443;--warn:#9a6700;--accent:#3559c7}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif}
+    .wrap{max-width:1180px;margin:0 auto;padding:32px 22px 60px}.hero{background:linear-gradient(135deg,#16233f,#3559c7);color:#fff;border-radius:18px;padding:30px 32px;box-shadow:0 12px 30px #1d2e5b22}.hero h1{margin:0 0 8px;font-size:28px}.hero p{margin:4px 0;color:#dbe5ff}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}.metric{font-size:28px;font-weight:750}.label{color:var(--muted);font-size:13px}.section{margin-top:26px}.section h2{font-size:20px;margin:0 0 12px}.table{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line)}th{background:#f1f4f9;font-size:13px}tr:last-child td{border-bottom:0}.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:650}.ok{background:#dcfce7;color:var(--ok)}.warn{background:#fff3cd;color:var(--warn)}.note{background:#eef3ff;border-left:4px solid var(--accent);padding:13px 15px;border-radius:8px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}.list{margin:8px 0;padding-left:20px}code{background:#f0f2f5;border-radius:4px;padding:1px 5px}footer{margin-top:32px;color:var(--muted);font-size:13px}@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}.hero{padding:24px 20px}.hero h1{font-size:23px}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero"><h1>Sermon LM Studio 작업 종합 대시보드</h1><p>리팩터링·RAG·Grounding·Web Provider 평가 현황</p><p>작업일자: 2026-09-01 · 제품 버전: V40.9.1</p></header>
+  <section class="grid" aria-label="핵심 지표">
+    <div class="card"><div class="metric">216</div><div class="label">전체 pytest passed</div></div>
+    <div class="card"><div class="metric">0</div><div class="label">failed / error</div></div>
+    <div class="card"><div class="metric">17</div><div class="label">완료 단계</div></div>
+    <div class="card"><div class="metric">OFF</div><div class="label">Web Grounding 기본값</div></div>
+  </section>
+  <section class="section"><h2>현재 판정</h2><div class="note"><strong>PASS WITH WARNINGS</strong> — Adapter 구조·Tier D·fallback·오프라인 동작은 검증됨. 실제 Provider endpoint가 없어 검색 품질·최신성·비용·quota는 live 평가 대기 상태.</div></section>
+  <section class="section"><h2>단계별 진행 현황</h2><div class="table"><table><thead><tr><th>영역</th><th>단계</th><th>상태</th><th>핵심 결과</th></tr></thead><tbody>
+    <tr><td>구조 분리</td><td>Phase 1C-1~1C-5</td><td><span class="pill ok">완료</span></td><td>Settings / Project / Doctrine / Bible / Sermon Repository</td></tr>
+    <tr><td>서비스·RAG</td><td>Phase 1D~2B</td><td><span class="pill ok">완료</span></td><td>Sermon Service, FTS5 선택, RRF 선택</td></tr>
+    <tr><td>근거·검증</td><td>Phase 2C~2F</td><td><span class="pill ok">완료</span></td><td>Evidence, Validator, Audit, Dashboard, Report Export</td></tr>
+    <tr><td>Router</td><td>Phase 3A</td><td><span class="pill ok">완료</span></td><td>health/settings/projects/doctrine/bible/exports</td></tr>
+    <tr><td>Web Grounding</td><td>Phase 3B</td><td><span class="pill ok">완료</span></td><td>선택형 generic HTTP adapter, runtime Tier D</td></tr>
+    <tr><td>Provider 평가</td><td>Phase 3C</td><td><span class="pill warn">경고 포함</span></td><td>30 query mock 평가 완료, live 평가 skipped</td></tr>
+  </tbody></table></div></section>
+  <section class="section"><h2>Phase 3C Mock 평가</h2><div class="grid">
+    <div class="card"><div class="metric">30</div><div class="label">평가 Query</div></div><div class="card"><div class="metric">90%</div><div class="label">Success Rate</div></div><div class="card"><div class="metric">0.02ms</div><div class="label">Median latency</div></div><div class="card"><div class="metric">100%</div><div class="label">핵심 metadata completeness</div></div>
+  </div><p class="label">Mock 결과는 adapter 구조 검증용이며 실제 검색 품질을 대표하지 않습니다. Empty result 3건은 edge fixture의 의도된 결과입니다.</p></section>
+  <section class="section cols"><div class="card"><h2>안전·호환성</h2><ul class="list"><li>기존 API URL·응답 형식 유지</li><li>SQLite schema·데이터 변경 없음</li><li>Scripture 중심본문 검증 유지</li><li>Tier A/B/C 정책 변경 없음</li><li>Web OFF 시 Provider 호출 0회</li><li>순환 import 검사 통과</li></ul></div><div class="card"><h2>변경 금지 영역 유지</h2><ul class="list"><li>FTS5 / RRF 알고리즘</li><li>LM Studio Provider</li><li>Bible·Doctrine·Sermon Repository</li><li>기존 Sermon Export renderer</li><li>자동 재검색·재생성</li><li>Multi-Provider / Failover</li></ul></div></section>
+  <section class="section"><h2>Feature Flag</h2><div class="table"><table><thead><tr><th>Flag</th><th>기본값</th><th>역할</th></tr></thead><tbody><tr><td><code>WEB_GROUNDING_ENABLED</code></td><td>false</td><td>Web Search 전체 허용 여부</td></tr><tr><td><code>web_grounding</code></td><td>false</td><td>개별 Sermon 요청 선택 옵션</td></tr><tr><td><code>GROUNDING_AUDIT_ENABLED</code></td><td>false</td><td>기존 Grounding Audit</td></tr><tr><td><code>RAG_LEXICAL_STRATEGY</code></td><td>legacy</td><td>FTS5 선택 가능</td></tr><tr><td><code>RAG_FUSION_STRATEGY</code></td><td>legacy_weighted</td><td>RRF 선택 가능</td></tr></tbody></table></div></section>
+  <section class="section"><h2>다음 권장 단계</h2><div class="note">실제 Provider endpoint/API key를 별도 승인한 뒤 30개 live query를 수동 평가합니다. PASS면 Phase 3D-A를 검토하고, 반복적인 장애·품질 저하·rate-limit 문제가 있을 때만 Multi-Provider + Failover를 제안합니다. 현재는 여기서 중단합니다.</div></section>
+  <footer>상세 보고서: <code>PHASE3B_WEB_GROUNDING_REPORT.md</code>, <code>PHASE3C_WEB_PROVIDER_EVALUATION_REPORT.md</code> · 평가 JSON: <code>web_provider_evaluation.json</code></footer>
+</main>
+</body>
+</html>

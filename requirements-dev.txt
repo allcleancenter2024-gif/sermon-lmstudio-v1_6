@@ -1,0 +1,2 @@
+# Development and CI-only dependencies. Runtime start.bat does not install these.
+pytest>=8.0,<9

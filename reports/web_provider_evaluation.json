@@ -1,0 +1,825 @@
+{
+  "provider": "mock (offline)",
+  "actual_provider_evaluation": "skipped",
+  "expected_external_requests": 30,
+  "total_requests": 30,
+  "success_rate": 0.9,
+  "empty_result_rate": 0.1,
+  "error_rate": 0.0,
+  "latency_ms": {
+    "average": 0.02,
+    "median": 0.02,
+    "p95": 0.07,
+    "min": 0.0,
+    "max": 0.09
+  },
+  "official_source_coverage": 0.0,
+  "metadata_completeness": {
+    "url": 1.0,
+    "title": 1.0,
+    "published_at": 1.0,
+    "provider": 1.0
+  },
+  "duplicate_rate": 0.0,
+  "grounding": {
+    "source_type": "web",
+    "tier": "D"
+  },
+  "rows": [
+    {
+      "query": "한국 고령인구 비율 최신 통계",
+      "category": "ko_public_stats",
+      "latency_ms": 0.07,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 한국 고령인구 비율 최신 통계",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 한국 고령인구 비율 최신 통계",
+          "title": "Mock result: 한국 고령인구 비율 최신 통계",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 한국 고령인구 비율 최신 통계",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "한국 출산율 최신 통계",
+      "category": "ko_public_stats",
+      "latency_ms": 0.04,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 한국 출산율 최신 통계",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 한국 출산율 최신 통계",
+          "title": "Mock result: 한국 출산율 최신 통계",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 한국 출산율 최신 통계",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "한국 청소년 스마트폰 사용률",
+      "category": "ko_public_stats",
+      "latency_ms": 0.03,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 한국 청소년 스마트폰 사용률",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 한국 청소년 스마트폰 사용률",
+          "title": "Mock result: 한국 청소년 스마트폰 사용률",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 한국 청소년 스마트폰 사용률",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "한국 자살률 통계",
+      "category": "ko_public_stats",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 한국 자살률 통계",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 한국 자살률 통계",
+          "title": "Mock result: 한국 자살률 통계",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 한국 자살률 통계",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "한국 1인 가구 비율",
+      "category": "ko_public_stats",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 한국 1인 가구 비율",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 한국 1인 가구 비율",
+          "title": "Mock result: 한국 1인 가구 비율",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 한국 1인 가구 비율",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 한국 물가 동향",
+      "category": "recent_social",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 한국 물가 동향",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 한국 물가 동향",
+          "title": "Mock result: 최근 한국 물가 동향",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 한국 물가 동향",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 고령사회 관련 정책",
+      "category": "recent_social",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 고령사회 관련 정책",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 고령사회 관련 정책",
+          "title": "Mock result: 최근 고령사회 관련 정책",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 고령사회 관련 정책",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 청소년 디지털 사용 현황",
+      "category": "recent_social",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 청소년 디지털 사용 현황",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 청소년 디지털 사용 현황",
+          "title": "Mock result: 최근 청소년 디지털 사용 현황",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 청소년 디지털 사용 현황",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 한국 실업률",
+      "category": "recent_social",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 한국 실업률",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 한국 실업률",
+          "title": "Mock result: 최근 한국 실업률",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 한국 실업률",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 한국 가계부채",
+      "category": "recent_social",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 한국 가계부채",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 한국 가계부채",
+          "title": "Mock result: 최근 한국 가계부채",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 한국 가계부채",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 국제 유가",
+      "category": "international",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 국제 유가",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 국제 유가",
+          "title": "Mock result: 최근 국제 유가",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 국제 유가",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 세계 식량 가격",
+      "category": "international",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 세계 식량 가격",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 세계 식량 가격",
+          "title": "Mock result: 최근 세계 식량 가격",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 세계 식량 가격",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 세계 고령화 통계",
+      "category": "international",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 세계 고령화 통계",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 세계 고령화 통계",
+          "title": "Mock result: 최근 세계 고령화 통계",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 세계 고령화 통계",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 글로벌 인플레이션",
+      "category": "international",
+      "latency_ms": 0.05,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 글로벌 인플레이션",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 글로벌 인플레이션",
+          "title": "Mock result: 최근 글로벌 인플레이션",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 글로벌 인플레이션",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "최근 세계 경제 성장률",
+      "category": "international",
+      "latency_ms": 0.09,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 최근 세계 경제 성장률",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 최근 세계 경제 성장률",
+          "title": "Mock result: 최근 세계 경제 성장률",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 최근 세계 경제 성장률",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "1세기 로마 제국의 사회 구조",
+      "category": "history",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 1세기 로마 제국의 사회 구조",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 1세기 로마 제국의 사회 구조",
+          "title": "Mock result: 1세기 로마 제국의 사회 구조",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 1세기 로마 제국의 사회 구조",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "고대 유대인의 결혼 관습",
+      "category": "history",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 고대 유대인의 결혼 관습",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 고대 유대인의 결혼 관습",
+          "title": "Mock result: 고대 유대인의 결혼 관습",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 고대 유대인의 결혼 관습",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "신약시대 로마 시민권",
+      "category": "history",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 신약시대 로마 시민권",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 신약시대 로마 시민권",
+          "title": "Mock result: 신약시대 로마 시민권",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 신약시대 로마 시민권",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "고대 팔레스타인의 농업",
+      "category": "history",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 고대 팔레스타인의 농업",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 고대 팔레스타인의 농업",
+          "title": "Mock result: 고대 팔레스타인의 농업",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 고대 팔레스타인의 농업",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "초대교회의 역사적 배경",
+      "category": "history",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 초대교회의 역사적 배경",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 초대교회의 역사적 배경",
+          "title": "Mock result: 초대교회의 역사적 배경",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 초대교회의 역사적 배경",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "latest global aging statistics",
+      "category": "english",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: latest global aging statistics",
+          "reference": "https://official.example.test/source",
+          "text": "Context for latest global aging statistics",
+          "title": "Mock result: latest global aging statistics",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for latest global aging statistics",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "global inflation outlook",
+      "category": "english",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: global inflation outlook",
+          "reference": "https://official.example.test/source",
+          "text": "Context for global inflation outlook",
+          "title": "Mock result: global inflation outlook",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for global inflation outlook",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "youth smartphone usage study",
+      "category": "english",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: youth smartphone usage study",
+          "reference": "https://official.example.test/source",
+          "text": "Context for youth smartphone usage study",
+          "title": "Mock result: youth smartphone usage study",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for youth smartphone usage study",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "Roman Empire first century society",
+      "category": "english",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: Roman Empire first century society",
+          "reference": "https://official.example.test/source",
+          "text": "Context for Roman Empire first century society",
+          "title": "Mock result: Roman Empire first century society",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for Roman Empire first century society",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "ancient Jewish wedding customs",
+      "category": "english",
+      "latency_ms": 0.01,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: ancient Jewish wedding customs",
+          "reference": "https://official.example.test/source",
+          "text": "Context for ancient Jewish wedding customs",
+          "title": "Mock result: ancient Jewish wedding customs",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for ancient Jewish wedding customs",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "존재하지 않는 통계",
+      "category": "edge",
+      "latency_ms": 0.0,
+      "results": [],
+      "error": null,
+      "scores": {
+        "relevance": 0,
+        "authority": 0,
+        "freshness": 0,
+        "metadata_completeness": 0
+      }
+    },
+    {
+      "query": "모호한 질의",
+      "category": "edge",
+      "latency_ms": 0.0,
+      "results": [],
+      "error": null,
+      "scores": {
+        "relevance": 0,
+        "authority": 0,
+        "freshness": 0,
+        "metadata_completeness": 0
+      }
+    },
+    {
+      "query": "매우 긴 질의 검증용 텍스트",
+      "category": "edge",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 매우 긴 질의 검증용 텍스트",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 매우 긴 질의 검증용 텍스트",
+          "title": "Mock result: 매우 긴 질의 검증용 텍스트",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 매우 긴 질의 검증용 텍스트",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "특수문자 !@#$%^&* 포함 질의",
+      "category": "edge",
+      "latency_ms": 0.02,
+      "results": [
+        {
+          "id": "https://official.example.test/source",
+          "source_type": "web",
+          "source_name": "Mock result: 특수문자 !@#$%^&* 포함 질의",
+          "reference": "https://official.example.test/source",
+          "text": "Context for 특수문자 !@#$%^&* 포함 질의",
+          "title": "Mock result: 특수문자 !@#$%^&* 포함 질의",
+          "url": "https://official.example.test/source",
+          "domain": "official.example.test",
+          "snippet": "Context for 특수문자 !@#$%^&* 포함 질의",
+          "published_at": "2026-01-01",
+          "provider": "mock",
+          "source_id": "https://official.example.test/source"
+        }
+      ],
+      "error": null,
+      "scores": {
+        "relevance": 5,
+        "authority": 3,
+        "freshness": 4,
+        "metadata_completeness": 5
+      }
+    },
+    {
+      "query": "검색결과가 거의 없을 질의",
+      "category": "edge",
+      "latency_ms": 0.0,
+      "results": [],
+      "error": null,
+      "scores": {
+        "relevance": 0,
+        "authority": 0,
+        "freshness": 0,
+        "metadata_completeness": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>성경 근거 설교 작성기</title>
+  <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+  <link rel="stylesheet" href="/static/style.css?v=40.9.10">
+  <link rel="stylesheet" href="/static/v2.css?v=40.9.10">
+</head>
+<body class="simple-ui">
+  <header>
+    <p class="eyebrow">LM STUDIO · LOCAL AI · <span id="runtimeVersion">V40 확인 중</span></p>
+    <h1>성경 근거 설교 작성기</h1>
+    <p>성경 자료를 먼저 찾고, 번역본을 비교한 뒤 그 근거 안에서 15·20·25·30·40분 설교 초안을 만듭니다.</p>
+    <div class="header-actions"><div id="status" class="status checking">LM Studio 연결 확인 중…</div><button id="logoutButton" type="button">로그아웃</button></div>
+  </header>
+  <aside id="sideMenu" class="side-menu" aria-label="주요 메뉴"><div class="side-menu-head"><strong>작업 메뉴</strong><button id="toggleSideMenu" type="button" aria-expanded="true" aria-controls="sideMenu" title="좌측 메뉴 접기">‹</button></div><div class="side-menu-body"><span class="side-menu-label">설교 흐름</span><button type="button" data-jump="firstRunPanel">준비상태</button><button type="button" data-jump="requestPanel">설교 입력</button><button type="button" data-jump="researchPanel">본문 연구</button><button type="button" data-jump="outlinePanel">구조·생성</button><button type="button" data-jump="resultPanel">결과·근거</button><button type="button" data-jump="savedPanel">저장·검토</button><span class="side-menu-label secondary">관리</span><button type="button" data-jump="operationsPanel">프로젝트·설정</button><button type="button" data-jump="readinessPanel">준비진단</button><button type="button" data-jump="changesPanel">변경사항 안내</button><button type="button" data-jump="workSummaryPanel">작업 종합 대시보드</button></div></aside>
+
+  <nav class="quick-nav" aria-label="주요 작업 바로가기">
+    <div class="quick-nav-inner">
+      <button id="toggleSideMenuTop" class="menu-toggle" type="button" aria-label="좌측 메뉴 열기/닫기">☰ 메뉴</button>
+      <span class="quick-nav-title">빠른 이동</span>
+      <button type="button" data-jump="firstRunPanel">준비상태</button>
+      <button type="button" data-jump="requestPanel">1. 설교 입력</button>
+      <button type="button" data-jump="researchPanel">2. 본문 연구</button>
+      <button type="button" data-jump="outlinePanel">3. 구조·생성</button>
+      <button type="button" data-jump="resultPanel">4. 결과</button>
+      <button type="button" data-jump="savedPanel">5. 저장·검토</button>
+      <button id="toggleSimpleUi" class="view-toggle" type="button" aria-pressed="true">고급 기능 보기</button>
+    </div>
+  </nav>
+
+  <main>
+    <section id="operationsPanel" class="panel full operations-panel optional-panel">
+      <div class="section-head"><h2>설교 준비 운영 대시보드</h2><button id="refreshDashboard">대시보드 새로고침</button></div>
+      <div id="projectSummary" class="project-summary">프로젝트 상태를 불러오는 중입니다…</div>
+      <div class="reading-speed-box">
+        <div><h3>개인 낭독속도</h3><p class="notice">공백 제외 글자/분 기준입니다. 생성·분량보정·재감사에 동일하게 적용됩니다.</p></div>
+        <label>현재 속도<input id="readingCpm" type="number" min="180" max="600" value="330"></label><button id="saveReadingCpm">속도 저장</button>
+      </div>
+      <details class="calibration-box"><summary>실제 낭독으로 속도 보정하기</summary><label>직접 읽은 본문<textarea id="calibrationText" rows="3" placeholder="공백 제외 80자 이상의 본문을 붙여넣고 실제 낭독 시간을 재세요."></textarea></label><div class="history-row"><label>걸린 시간(초)<input id="calibrationSeconds" type="number" min="15" value="60"></label><button id="calibrateReading">측정값으로 속도 보정</button></div></details>
+      <div id="projectDashboard" class="project-dashboard"></div>
+    </section>
+
+    <section id="readinessPanel" class="panel full readiness-panel optional-panel">
+      <div class="section-head"><div><h2>V40 Windows 실사용 준비진단</h2><p class="notice">LM Studio·성경 DB·15분 기본값·저장 폴더·PDF 환경을 한 번에 확인합니다.</p></div><button id="runReadiness" type="button">실사용 준비 다시 점검</button></div>
+      <div id="readinessStatus" class="import-status">실행 환경을 점검하고 있습니다…</div>
+      <div id="readinessSteps" class="readiness-steps"></div>
+      <p id="readinessPath" class="field-hint"></p>
+      <div class="readiness-integration" aria-labelledby="githubSetupTitle">
+        <div><h3 id="githubSetupTitle">GitHub 연결 설정</h3><p class="notice">현재 폴더의 Git 상태와 연결할 GitHub 저장소 주소를 기록합니다. 인증, commit, push는 자동으로 실행하지 않습니다.</p></div>
+        <div class="history-row"><label>GitHub 저장소 주소<input id="githubRepositoryUrl" type="url" placeholder="https://github.com/owner/repository" spellcheck="false"></label><button id="saveGithubSettings" type="button">GitHub 설정 저장</button></div>
+        <p id="githubSettingsStatus" class="field-hint"></p>
+      </div>
+    </section>
+
+    <section id="changesPanel" class="panel full changes-panel optional-panel" aria-labelledby="changesTitle">
+      <div class="changes-hero"><div><p class="eyebrow-dark">RELEASE NOTES · VERSION HISTORY</p><h2 id="changesTitle">변경사항 안내</h2><p class="notice">현재 설치된 프로그램의 업데이트 결과를 버전별로 한눈에 확인합니다.</p></div><span class="changes-current">V40.9.4<br><small>현재 버전</small></span></div>
+      <div class="changes-grid">
+        <article class="change-card current"><div class="change-card-head"><span>40.9.4</span><b>현재</b></div><h3>메뉴·화면 레이아웃 개선</h3><ul><li>좌측 메뉴와 제목 영역이 겹치지 않도록 반응형 여백을 적용했습니다.</li><li>메뉴를 접은 뒤 상단 버튼으로 다시 열 수 있습니다.</li><li>선택한 메뉴와 해당 화면을 하늘색 강조선으로 구분합니다.</li></ul></article>
+        <article class="change-card"><div class="change-card-head"><span>40.9.3</span><b>UI 안정화</b></div><h3>로그인·긴 화면 탐색</h3><ul><li>로그인·로그아웃 흐름과 세션 보호를 정리했습니다.</li><li>빠른 이동, 간편 화면, 맨 위로 이동을 추가했습니다.</li></ul></article>
+        <article class="change-card"><div class="change-card-head"><span>40.9.x</span><b>기능 모듈화</b></div><h3>저장·근거·검색 구조</h3><ul><li>Settings, Project, Doctrine, Bible, Sermon Repository를 단계적으로 분리했습니다.</li><li>RAG, Evidence 정규화, Grounding Audit·Dashboard·Export를 통합했습니다.</li></ul></article>
+        <article class="change-card"><div class="change-card-head"><span>40.8.x</span><b>워크플로우</b></div><h3>설교 작성 안내 강화</h3><ul><li>처음 사용 설정, 준비진단, 설교 단계별 대시보드를 제공합니다.</li><li>SQLite FTS5·RRF 검색과 선택형 Web Grounding 평가 기반을 마련했습니다.</li></ul></article>
+      </div>
+      <p class="changes-footnote">데이터베이스 스키마와 기존 API 주소·응답 형식은 유지됩니다.</p>
+    </section>
+
+    <section id="workSummaryPanel" class="panel full work-summary-panel optional-panel" aria-labelledby="workSummaryTitle">
+      <div class="work-summary-head"><div><p class="eyebrow-dark">SERMON LM STUDIO · PROJECT SUMMARY</p><h2 id="workSummaryTitle">Sermon LM Studio 작업 종합 대시보드</h2><p class="notice">Phase 0부터 현재까지의 리팩터링·RAG·Grounding·Web Provider 평가 결과를 최종 상태로 정리합니다.</p></div><div class="work-summary-actions"><button id="workSummaryMarkdown" type="button">Markdown 저장</button><button id="workSummaryHtml" type="button">HTML 저장</button><button id="workSummaryPrint" type="button">PDF / 인쇄</button></div></div>
+      <div class="work-summary-hero"><div><strong>현재 판정</strong><p>PASS WITH WARNINGS</p><small>오프라인 동작·기존 호환성·Windows PDF 출력 환경을 확인했습니다. 실제 Web Provider 품질 평가는 연결된 endpoint에서 별도 실행합니다.</small></div><span>V40.9.10</span></div>
+      <div class="work-summary-stats"><div><b>220</b><small>전체 pytest passed</small></div><div><b>0</b><small>failed / error</small></div><div><b>17</b><small>완료 단계</small></div><div><b>OFF</b><small>Web Grounding 기본값</small></div></div>
+      <h3>단계별 진행 현황</h3><div class="work-summary-table"><div class="work-summary-row head"><b>영역</b><b>단계</b><b>상태</b><b>핵심 결과</b></div><div class="work-summary-row"><span>구조 분리</span><span>Phase 1C-1~1C-5</span><em>완료</em><span>Settings / Project / Doctrine / Bible / Sermon Repository</span></div><div class="work-summary-row"><span>서비스·RAG</span><span>Phase 1D~2B</span><em>완료</em><span>Sermon Service, FTS5 선택, RRF 선택</span></div><div class="work-summary-row"><span>근거·검증</span><span>Phase 2C~2F</span><em>완료</em><span>Evidence, Validator, Audit, Dashboard, Report Export</span></div><div class="work-summary-row"><span>Router</span><span>Phase 3A</span><em>완료</em><span>health / settings / projects / doctrine / bible / exports</span></div><div class="work-summary-row"><span>Web Grounding</span><span>Phase 3B</span><em>완료</em><span>선택형 generic HTTP adapter, runtime Tier D</span></div><div class="work-summary-row"><span>Provider 평가</span><span>Phase 3C</span><em class="warn">경고 포함</em><span>30 query mock 평가 완료, live 평가 대기</span></div></div>
+      <div class="work-summary-columns"><article><h3>안전·호환성</h3><ul><li>기존 API URL·응답 형식 유지</li><li>SQLite schema·데이터 변경 없음</li><li>Script 중심분문 검증 유지</li><li>Tier A/B/C 정책 변경 없음</li></ul></article><article><h3>변경 금지 영역 유지</h3><ul><li>FTS5 / RRF 알고리즘</li><li>LM Studio Provider</li><li>Bible·Doctrine·Sermon Repository</li><li>기존 Sermon Export renderer</li></ul></article></div>
+      <p class="work-summary-footnote">PDF 버튼은 브라우저 인쇄 대화상자를 열어 “PDF로 저장”을 지원합니다. 모든 내보내기는 현재 화면의 요약 정보만 사용하며 원문·개인정보를 외부로 전송하지 않습니다.</p>
+    </section>
+
+    <section id="firstRunPanel" class="panel full first-run-panel">
+      <div class="section-head"><div><h2>처음 사용 설정 · 여기서 시작하세요</h2><p class="notice">복잡한 설정 화면을 찾지 않아도 됩니다. 프로그램이 현재 상태를 읽고 다음에 할 한 가지만 안내합니다.</p></div><span class="wizard-count">V40</span></div>
+      <div id="firstRunSteps" class="first-run-steps" aria-live="polite">
+        <div class="first-run-step pending"><b>1</b><span>LM Studio</span><small>확인 중</small></div>
+        <div class="first-run-step pending"><b>2</b><span>생성 모델</span><small>확인 중</small></div>
+        <div class="first-run-step pending"><b>3</b><span>성경 DB</span><small>확인 중</small></div>
+        <div class="first-run-step pending"><b>4</b><span>RAG</span><small>권장 기능</small></div>
+        <div class="first-run-step pending"><b>5</b><span>설교 작성</span><small>15분 기본</small></div>
+      </div>
+      <div id="firstRunMessage" class="import-status">설정 상태를 확인하고 있습니다…</div>
+      <div class="rag-actions"><button id="firstRunNext" type="button">다음 해야 할 일로 이동</button><button id="firstRunRefresh" type="button">상태 다시 확인</button></div>
+      <p class="notice">RAG·PDF·원어 사전은 보완 기능입니다. LM Studio 생성 모델과 성경 DB가 준비되면 먼저 설교를 작성할 수 있습니다.</p>
+    </section>
+
+    <section id="wizardPanel" class="panel full wizard-panel">
+      <div class="wizard-hero-head"><div><p class="eyebrow-dark">SERMON WORKFLOW · V40</p><h2>오늘의 설교, 한 단계씩 준비하세요</h2><p class="notice">필수 작업은 순서대로 안내하고, 근거·검토·출력은 완료 상태에 맞춰 열립니다.</p></div><div class="wizard-hero-status"><span id="wizardCount" class="wizard-count">새 설교 준비</span><small>현재 작업 흐름</small></div></div>
+      <div id="wizardSteps" class="wizard-steps">
+        <button type="button" data-target="requestPanel"><b>1</b><span>주제·본문 설정</span></button>
+        <button type="button" data-target="researchPanel"><b>2</b><span>성경 본문 연구</span></button>
+        <button type="button" data-target="languagePanel"><b>3</b><span>번역·원어 비교</span></button>
+        <button type="button" data-target="outlinePanel"><b>4</b><span>구조·설교 초안</span></button>
+        <button type="button" data-target="resultPanel"><b>5</b><span>근거 검증</span></button>
+        <button type="button" data-target="savedPanel"><b>6</b><span>목회자 검토</span></button>
+        <button type="button" data-target="savedPanel"><b>7</b><span>최종 잠금·출력</span></button>
+      </div>
+      <div id="wizardMessage" class="wizard-message">1단계부터 시작하세요. 저장된 설교를 열면 실제 진행 상태를 표시합니다.</div>
+      <details class="wizard-evidence-panel"><summary>근거 상태 빠른 확인 <span id="wizardEvidenceBadge" class="evidence-badge">확인 전</span></summary><div class="wizard-evidence-grid"><div><small>근거 연결률</small><strong id="wizardEvidenceCoverage">-</strong></div><div><small>확인 필요</small><strong id="wizardEvidenceIssues">-</strong></div><div><small>Web Evidence</small><strong id="wizardWebEvidence">사용 안 함</strong></div></div><p id="wizardEvidenceHint">설교를 생성하면 Bible Evidence와 Grounding Audit 결과가 여기에 표시됩니다.</p><button type="button" data-jump="resultPanel">상세 근거·Audit 보기</button></details>
+      <div class="wizard-project-strip" aria-live="polite">
+        <div><small>프로젝트 현황</small><strong id="wizardProjectTotal">확인 중</strong></div>
+        <div><small>검토 대기</small><strong id="wizardProjectReview">-</strong></div>
+        <div><small>최종 잠금</small><strong id="wizardProjectLocked">-</strong></div>
+        <p id="wizardProjectHint">저장된 설교 프로젝트 상태를 불러오는 중입니다.</p>
+      </div>
+    </section>
+
+    <section id="requestPanel" class="panel form-panel">
+      <h2>1. 설교 요청</h2>
+      <label>설교 주제<input id="topic" placeholder="예: 두려움 속에서도 함께하시는 하나님"></label>
+      <label>세부사항<textarea id="details" rows="5" placeholder="예: 경제적 어려움과 불안 가운데 하나님을 신뢰하는 믿음"></textarea></label>
+      <div class="grid">
+        <label>중심본문<input id="reference" placeholder="예: 이사야 41:10"></label>
+        <label>설교 시간<select id="minutes"><option value="15" selected>15분</option><option value="20">20분</option><option value="25">25분</option><option value="30">30분</option><option value="40">40분</option></select><small id="minutesHint" class="field-hint">기본 15분 · 서버 설정 확인 중</small></label>
+        <label>청중<select id="audience"><option>전 연령</option><option>청년</option><option>장년</option><option>노년</option></select></label>
+        <label>신학적 전통<select id="tradition"><option>초교파 복음주의</option><option>장로교</option><option>감리교</option><option>침례교</option><option>성결교</option></select></label>
+      </div>
+      <div class="connection-box">
+        <div><b>LM Studio 로컬 연결</b><small>현재 서버 주소는 http://127.0.0.1:12345/v1 입니다. 이 PC의 로컬 주소만 허용합니다.</small></div>
+        <label>API 주소<input id="lmStudioUrl" value="http://127.0.0.1:12345/v1" spellcheck="false"></label>
+        <button id="saveLmStudio" type="button">저장 · 연결 시험</button>
+        <span id="lmStudioMessage">OpenAI 호환 API와 LM Studio REST API를 순서대로 진단하고 있습니다…</span>
+      </div>
+      <label>LM Studio 생성 모델<select id="model"><option value="">연결 후 자동 선택</option></select></label>
+      <div class="rag-box">
+        <div><b>RAG 초기설정 · 5단계 진단</b><small>연결부터 성경 데이터와 인덱스까지 순서대로 확인합니다. 초록색 5개가 모두 켜지면 관련구절 의미검색을 사용할 수 있습니다.</small></div>
+        <div id="ragSetupSteps" class="rag-setup-steps" aria-live="polite">
+          <div class="rag-step pending"><b>1</b><span>LM Studio</span><small>확인 중</small></div>
+          <div class="rag-step pending"><b>2</b><span>생성 모델</span><small>확인 중</small></div>
+          <div class="rag-step pending"><b>3</b><span>임베딩</span><small>확인 중</small></div>
+          <div class="rag-step pending"><b>4</b><span>성경 데이터</span><small>확인 중</small></div>
+          <div class="rag-step pending"><b>5</b><span>RAG 인덱스</span><small>확인 중</small></div>
+        </div>
+        <div id="ragSetupGuide" class="rag-setup-guide">준비 상태를 확인하고 있습니다…</div>
+        <label>임베딩 모델<select id="embeddingModel"><option value="">임베딩 모델 선택</option></select></label>
+        <div class="rag-actions"><button id="buildRag" type="button">RAG 인덱스 만들기</button><button id="goBibleData" type="button">성경 자료 추가로 이동</button><button id="refreshRagSetup" type="button">준비상태 다시 확인</button><label class="check"><input id="useRag" type="checkbox" checked> 설교 생성에 RAG 사용</label></div>
+        <p id="ragStatus">RAG 상태 확인 중…</p>
+      </div>
+      <button id="recommendBtn" type="button">중심본문 관련구절 자동추천</button>
+      <div id="recommendResults" class="recommend-results"></div>
+      <p class="notice">다음으로 본문 연구와 설교 구조를 확인한 뒤 원고를 생성합니다.</p>
+    </section>
+
+    <section id="researchPanel" class="panel full optional-panel">
+      <div class="section-head"><div><h2>중심본문 연구 노트</h2><p>등록된 자료만 사용해 번역본·원어·앞뒤 절을 정리하고, RAG가 준비된 경우 관련구절까지 한 번에 연결합니다.</p></div><span class="wizard-count">V40</span></div>
+      <div class="study-toolbar"><label>연구할 중심본문<input id="studyReference" placeholder="예: 이사야 41:10"></label><button id="buildStudy" type="button">본문 연구 노트 만들기</button><button id="copyStudy" type="button" disabled>Markdown 복사</button></div>
+      <div id="studyStatus" class="meta">중심본문을 입력한 뒤 연구 노트를 만드세요.</div>
+      <div id="studyStats" class="study-stats"></div>
+      <div id="studyDashboard" class="study-dashboard"></div>
+      <details class="study-note-box"><summary>연구 노트 Markdown 보기</summary><pre id="studyMarkdown" class="study-markdown">아직 생성된 연구 노트가 없습니다.</pre></details>
+      <div class="evidence-packet-box">
+        <div class="section-head"><div><h3>통합 근거 패킷 · 근거 품질 가드</h3><p class="notice">실제 설교 생성과 같은 경로로 중심본문 연속성·번역 비교·원어 출처·교리 전통 정합성을 먼저 검사합니다.</p></div><button id="buildEvidencePacket" type="button">통합 근거 패킷 검사</button></div>
+        <div id="evidencePacketStatus" class="import-status">아직 통합 근거 패킷을 검사하지 않았습니다.</div>
+        <div id="evidencePacketStats" class="study-stats"></div>
+        <div class="interpretation-flow-box">
+          <h4>설교 작성 전 본문 해석 흐름</h4>
+          <p class="notice">자료를 단순 나열하지 않고, 준비된 근거만 아래 순서로 분석한 뒤 쉬운 설교 설명으로 종합합니다.</p>
+          <div id="interpretationFlow" class="interpretation-flow"><div class="flow-stage missing"><b>검사 전</b><small>통합 근거 패킷을 먼저 검사하세요.</small></div></div>
+        </div>
+        <div class="translation-policy-box">
+          <h4>영어 번역본 역할과 우선순위</h4>
+          <div id="translationPolicySummary" class="notice">핵심 엔진과 보조 번역의 역할을 아직 검사하지 않았습니다.</div>
+          <div id="translationPolicyGroups" class="translation-policy-groups"></div>
+        </div>
+        <div class="social-policy-box">
+          <h4>시대·정치·세계정세 적용 안전원칙</h4>
+          <div id="socialPolicyStatus" class="notice">공의·사랑·화해·책임의 중립 적용 원칙을 아직 검사하지 않았습니다.</div>
+          <div id="socialPolicyLenses" class="social-policy-lenses"></div>
+          <div id="socialPolicyRules" class="social-policy-rules"></div>
+        </div>
+        <div id="evidencePacketWarnings" class="evidence-warnings"></div>
+      </div>
+      <hr class="soft-rule">
+      <h3>번역본 병렬 비교</h3>
+      <p>같은 참조로 등록된 한국어·영어·히브리어·헬라어 자료를 한 번에 비교합니다.</p>
+      <div class="compare-row"><input id="compareReference" placeholder="예: Isaiah 41:10"><button id="compareBtn">비교하기</button></div>
+      <div id="compareResults" class="compare-results"></div>
+    </section>
+
+    <section id="notebookPanel" class="panel full notebook-panel optional-panel">
+      <div class="section-head"><div><h2>Gemini Notebook 연구 연결</h2><p class="notice">복잡한 API 설정 없이 자료팩을 만들고, Notebook의 연구 결과를 인용 확인용 외부 노트로 가져옵니다.</p></div><span class="wizard-count">V40.9.2</span></div>
+      <div class="notebook-steps" aria-label="Gemini Notebook 연결 단계">
+        <div class="notebook-step active"><b>1</b><span>자료 확인</span></div>
+        <div class="notebook-step"><b>2</b><span>자료팩 만들기</span></div>
+        <div class="notebook-step"><b>3</b><span>Notebook에서 연구</span></div>
+        <div class="notebook-step"><b>4</b><span>결과 가져오기</span></div>
+      </div>
+      <div class="notebook-guide"><b>사용 순서</b><span>중심본문 확인 → 자료팩 다운로드 → Gemini Notebook에 ZIP 안의 Markdown 파일 추가 → 답변과 인용을 아래에 붙여넣기</span></div>
+      <div class="notebook-grid">
+        <div class="notebook-card">
+          <h3>1·2. 자료 확인과 자료팩 만들기</h3>
+          <p class="notice">설교 요청의 중심본문·주제·선택 시간을 그대로 사용합니다. 자료팩은 성경 DB에 등록된 자료만 포함합니다.</p>
+          <label class="check cloud-confirm"><input id="notebookCloudConfirm" type="checkbox"> 저작권·사용조건을 확인했고 개인정보·상담내용을 클라우드로 보내지 않겠습니다.</label>
+          <label class="check"><input id="notebookSyncDrive" type="checkbox"> 만든 자료팩을 Google Drive 동기화 폴더에도 복사</label>
+          <button id="createNotebookPack" type="button">Notebook 자료팩 만들기</button>
+          <div id="notebookPackStatus" class="import-status">중심본문을 입력한 뒤 자료팩을 만드세요.</div>
+          <a id="notebookPackDownload" class="button-link hidden" href="#">자료팩 ZIP 다운로드</a>
+        </div>
+        <div class="notebook-card">
+          <h3>Google Drive 동기화 폴더</h3>
+          <p class="notice">Google Drive 데스크톱에서 보이는 실제 로컬 폴더의 전체 경로를 입력합니다. Google 비밀번호나 API 키는 필요하지 않습니다.</p>
+          <label>동기화 폴더 전체 경로<input id="notebookDriveFolder" placeholder="예: G:\내 드라이브 또는 C:\Users\사용자\My Drive"></label>
+          <div class="history-row"><button id="saveNotebookDrive" type="button">폴더 저장·쓰기 시험</button><button id="clearNotebookDrive" type="button">설정 해제</button></div>
+          <div id="notebookDriveStatus" class="import-status">동기화 폴더 상태를 확인하고 있습니다…</div>
+          <p class="field-hint">브라우저 보안상 폴더 선택창 대신 경로를 입력합니다. 자료팩은 <code>SermonLMStudio\NotebookLM</code> 하위에 복사됩니다.</p>
+        </div>
+      </div>
+      <div class="notebook-card notebook-import-card">
+        <h3>3·4. Notebook에서 연구한 결과 가져오기</h3>
+        <p class="notice">Notebook의 답변과 인용을 함께 복사해 붙여넣으세요. 이 내용은 성경·원어 DB에 합쳐지지 않고 별도 외부 연구노트로 저장됩니다.</p>
+        <label>연구노트 제목<input id="notebookNoteTitle" value="Gemini Notebook 연구노트"></label>
+        <label>Notebook 연구 결과<textarea id="notebookNoteContent" rows="8" placeholder="Notebook 답변과 인용 표시를 함께 붙여넣으세요."></textarea></label>
+        <div class="history-row"><button id="importNotebookNote" type="button">연구 결과 검사·가져오기</button><button id="refreshNotebookNotes" type="button">가져온 노트 확인</button></div>
+        <div id="notebookNoteStatus" class="import-status">아직 가져온 연구 결과가 없습니다.</div>
+        <div id="notebookNoteList" class="notebook-note-list"></div>
+      </div>
+    </section>
+
+    <section id="languagePanel" class="panel full optional-panel">
+      <h2>히브리어·헬라어 원어 근거</h2>
+      <p>중심본문의 원문 본문·lemma·음역·뜻·형태 정보를 출처와 함께 연결합니다. 등록된 자료만 설교 생성에 사용됩니다. 파일 종류는 프로그램이 판별하므로 원문 본문·형태론 근거·사전을 미리 구분할 필요가 없습니다.</p>
+      <div class="smart-original-wizard">
+        <div class="section-head"><div><h3>원어 자료 간편 등록</h3><p class="notice">파일 하나를 선택하면 원문 본문·형태론/lemma 근거·뜻/음역 사전을 자동으로 구분합니다.</p></div><span class="wizard-count">V40.9.2</span></div>
+        <div class="smart-steps" aria-label="원어 자료 등록 단계">
+          <div class="smart-step active"><b>1</b><span>파일 선택·확인</span></div>
+          <div class="smart-step"><b>2</b><span>출처·사용조건 확인</span></div>
+          <div class="smart-step"><b>3</b><span>내 PC DB에 등록</span></div>
+        </div>
+        <div class="smart-file-row">
+          <label>등록할 원어 자료 파일<input id="smartOriginalFile" type="file" accept=".zip,.txt,.xml,.osis,.json,.csv,.tsv,application/zip,application/xml,text/xml,text/plain,application/json,text/csv,text/tab-separated-values"></label>
+          <button id="previewSmartOriginal" type="button">1. 파일 종류 확인하기</button>
+        </div>
+        <div id="smartRoleCard" class="smart-role-card">파일을 선택하면 프로그램이 등록 위치를 결정합니다.</div>
+        <div class="smart-source-grid">
+          <label>자료 출처<input id="smartOriginalSource" placeholder="파일을 확인하면 권장 출처가 채워집니다"></label>
+          <label>사용조건<input id="smartOriginalLicense" placeholder="공식 배포 페이지의 사용조건을 확인하세요"></label>
+        </div>
+        <label class="check smart-confirm"><input id="confirmSmartOriginal" type="checkbox"> 위 출처·사용조건을 확인했고 이 PC의 로컬 DB에 저장할 권한이 있습니다.</label>
+        <div class="smart-action-row"><button id="runSmartOriginal" class="primary" type="button" disabled>3. 확인한 자료를 내 PC DB에 등록</button></div>
+        <pre id="smartOriginalPreview" class="import-preview compact-preview">아직 검사한 파일이 없습니다.</pre>
+        <div id="smartOriginalStatus" class="import-status">먼저 파일을 선택하고 “파일 종류 확인하기”를 누르세요.</div>
+        <details class="notice smart-help"><summary>어떤 파일을 선택하면 되나요?</summary><div class="file-role-guide"><div><b>신약 헬라어 본문</b><code>Matt.xml / 1Cor.xml / sblgnt.xml</code></div><div><b>신약 lemma·형태</b><code>*-morphgnt.txt</code></div><div><b>구약 lemma·형태</b><code>OSHB ZIP / 책별 XML</code></div><div><b>헬라어 사전</b><code>strongsgreek.xml</code></div><div><b>히브리어 사전</b><code>HebrewStrong.xml</code></div></div><p><b>SBLGNT XML</b>은 헬라어 본문을 등록합니다. 단어별 lemma·형태 정보까지 필요하면 같은 책의 MorphGNT TXT를 한 번 더 등록하세요.</p></details>
+      </div>
+      <details class="advanced-tools">
+        <summary>고급 기능: 한 단어를 직접 입력하기</summary>
+      <div class="original-grid">
+        <label>성경 참조<input id="oReference" placeholder="예: Isaiah 41:10"></label>
+        <label>언어<select id="oLanguage"><option value="he">히브리어 (he)</option><option value="grc">헬라어 (grc)</option></select></label>
+        <label>원어/lemma<input id="oLemma"></label>
+        <label>음역<input id="oTransliteration"></label>
+        <label>뜻<input id="oGloss"></label>
+        <label>형태·문법<input id="oMorphology"></label>
+        <label>출처<input id="oSource" placeholder="예: OSHB / SBLGNT"></label>
+        <label>사용조건<input id="oLicense" placeholder="예: CC BY 4.0"></label>
+      </div>
+      <div class="rag-actions"><button id="addOriginal">원어 근거 추가</button><button id="loadOriginal">이 본문 원어 근거 보기</button><span id="originalMessage"></span></div>
+      <p class="notice">직접 추가할 때는 lemma 하나가 실제로 나타나는 <b>한 절</b>(예: <code>MAT 14:27</code>)을 입력하세요. 범위 참조는 조회할 때만 사용합니다.</p>
+      </details>
+      <div id="originalResults" class="compare-results"></div>
+      <div class="evidence-packet-box">
+        <div class="section-head"><div><h3>선택 본문 원어 준비상태</h3><p class="notice">가져온 OSHB/MorphGNT 자료가 현재 본문의 모든 절에 실제로 연결되는지 검사합니다.</p></div><div class="inline-actions"><button id="loadOriginalQuick" type="button">등록된 단어 보기</button><button id="checkOriginalCoverage" type="button">원어 연결상태 점검</button></div></div>
+        <div id="originalCoverageStatus" class="import-status">중심본문을 입력한 뒤 원어 연결상태를 점검하세요.</div>
+        <div id="originalCoverageStats" class="study-stats"></div>
+      </div>
+      <details class="advanced-tools import-advanced"><summary>고급 기능: 파일 형식과 등록 위치를 직접 지정하기</summary>
+      <div class="import-wizard original-import-box">
+        <div class="section-head"><div><h3>원어 근거 파일 일괄 가져오기</h3><p class="notice">사용권을 확인한 원어 형태론 자료를 프로그램 공통 형식으로 등록합니다. V40는 MorphGNT TXT, OSHB 책별 XML과 전체 ZIP을 직접 변환하고 본문별 연결상태를 검증합니다.</p></div><span class="wizard-count">V40</span></div>
+        <div class="original-grid">
+          <label>파일 형식<select id="originalImportFormat"><option value="auto">자동 감지</option><option value="morphgnt">MorphGNT · SBLGNT 형태론 TXT</option><option value="oshb_zip">OSHB 전체 ZIP · 압축 그대로</option><option value="oshb_osis">OSHB · 책별 OSIS/XML</option><option value="json">JSON</option><option value="csv">CSV</option><option value="tsv">TSV</option></select></label>
+          <label>원어 근거 파일<input id="originalImportFile" type="file" accept=".zip,.txt,.xml,.osis,.json,.csv,.tsv,application/zip,application/xml,text/xml,application/json,text/csv,text/tab-separated-values,text/plain"></label>
+          <label>자료 출처<input id="originalImportSource" placeholder="공식 자료명/출처"></label>
+          <label>사용조건<input id="originalImportLicense" placeholder="예: 해당 자료의 라이선스"></label>
+        </div>
+        <p class="notice"><b>MorphGNT:</b> 신약 책별 <code>*-morphgnt.txt</code>를 그대로 선택 · <b>OSHB:</b> 공식 배포 ZIP을 <b>압축 풀지 않고 그대로</b> 선택할 수 있으며, 기존처럼 <code>wlc</code> 폴더의 책별 XML도 지원합니다. JSON/CSV/TSV는 필수 열 <code>reference, language, lemma</code>, 선택 열 <code>transliteration, gloss, morphology</code>.</p>
+        <details class="notice"><summary><b>원어 자료를 어디서 받고 어떻게 넣나요?</b></summary><ol><li><b>신약:</b> <a href="https://github.com/morphgnt/sblgnt" target="_blank" rel="noopener">MorphGNT SBLGNT 공식 저장소</a>에서 필요한 책의 <code>*-morphgnt.txt</code>를 내려받습니다. 마태복음은 <code>61-Mt-morphgnt.txt</code>입니다.</li><li><b>구약:</b> <a href="https://github.com/openscriptures/morphhb/releases" target="_blank" rel="noopener">OSHB 공식 Releases</a>의 전체 배포 ZIP(예: <code>OSHB-v.2.2.zip</code>)을 내려받고 <b>압축을 풀지 않은 채</b> 선택합니다.</li><li>파일 형식은 자동 감지로 두거나 MorphGNT/OSHB를 직접 선택하고 <b>원어 파일 검사 · 미리보기</b>를 누릅니다.</li><li>자료 출처·사용조건을 확인하고 체크한 뒤 <b>검사한 원어 근거 DB 등록</b>을 누릅니다. 등록 후 위의 <b>원어 연결상태 점검</b>으로 중심본문의 절별 연결을 확인합니다.</li></ol></details>
+        <div class="rag-actions"><button id="previewOriginalImport" type="button">원어 파일 검사 · 미리보기</button><label class="check"><input id="confirmOriginalImport" type="checkbox"> 이 자료의 출처와 사용조건 및 로컬 DB 저장 권한을 확인했습니다.</label><button id="runOriginalImport" type="button" disabled>검사한 원어 근거 DB 등록</button></div>
+        <pre id="originalImportPreview" class="import-preview">아직 검사한 원어 근거 파일이 없습니다.</pre>
+        <div id="originalImportStatus" class="import-status">원어 자료 파일을 선택한 뒤 검사하세요.</div>
+      </div>
+      <div class="import-wizard original-import-box">
+        <div class="section-head"><div><h3>원어 사전 · lemma 뜻/음역 연결</h3><p class="notice">MorphGNT/OSHB 원문을 바꾸지 않고 별도 사전 DB에서 정확히 일치하는 lemma의 뜻과 음역만 보강합니다. V40는 잘못 넣은 MorphGNT/OSHB 자료도 원어 근거로 자동 분류합니다.</p></div><span class="wizard-count">V40</span></div>
+        <div class="original-grid">
+          <label>사전 파일 형식<select id="lexiconImportFormat"><option value="auto">자동 감지</option><option value="xml">공식 Strong XML · 자동 구분</option><option value="strongs_greek_xml">Strong 헬라어 XML</option><option value="hebrew_strongs_xml">Strong 히브리어 XML</option><option value="json">JSON</option><option value="csv">CSV</option><option value="tsv">TSV</option></select></label>
+          <label>뜻/음역 사전 파일<input id="lexiconImportFile" type="file" accept=".zip,.xml,.osis,.txt,.json,.csv,.tsv,application/zip,application/xml,text/xml,text/plain,application/json,text/csv,text/tab-separated-values"></label>
+          <label>사전 출처<input id="lexiconImportSource" placeholder="예: 사용 허가를 확인한 원어 사전"></label>
+          <label>사전 사용조건<input id="lexiconImportLicense" placeholder="예: 해당 사전의 라이선스"></label>
+        </div>
+        <p class="notice"><b>여기는 뜻 사전 전용입니다.</b> 공식 <code>strongsgreek.xml</code>과 <code>HebrewStrong.xml</code>은 그대로 검사할 수 있습니다. 직접 만든 JSON/CSV/TSV의 필수 열은 <code>language, lemma, gloss</code>, 선택 열은 <code>transliteration</code>입니다. MorphGNT TXT나 OSHB ZIP/XML은 위의 원어 근거 가져오기로 자동 전달합니다. Strong 사전의 뜻은 영어이므로 한글 뜻이 필요하면 사용권을 확인한 한글 사전 CSV를 별도로 등록하세요.</p>
+        <details class="notice"><summary><b>lemma 뜻/음역 사전은 어디서 받고 어떻게 연결하나요?</b></summary><ol><li><b>신약:</b> MorphGNT의 <a href="https://github.com/morphgnt/strongs-dictionary-xml" target="_blank" rel="noopener">Strong Greek Dictionary XML</a>에서 <code>strongsgreek.xml</code>을 받습니다.</li><li><b>구약:</b> Open Scriptures <a href="https://github.com/openscriptures/HebrewLexicon" target="_blank" rel="noopener">HebrewLexicon</a>에서 <code>HebrewStrong.xml</code>을 받습니다.</li><li>파일 형식을 <b>자동 감지</b>로 두고 파일 선택 → <b>사전 파일 검사 · 미리보기</b>를 누릅니다.</li><li>공식 자료명과 실제 사용조건을 입력하고 확인란을 선택한 뒤 <b>검사한 원어 사전 DB 등록</b>을 누릅니다.</li><li>프로그램은 헬라어 철자와 히브리어 Strong 키를 원어 근거 DB의 lemma에 연결하며, 원문·형태 정보는 바꾸지 않습니다.</li></ol></details>
+        <div class="rag-actions"><button id="previewLexiconImport" type="button">사전 파일 검사 · 미리보기</button><label class="check"><input id="confirmLexiconImport" type="checkbox"> 이 사전의 출처와 사용조건 및 로컬 DB 저장 권한을 확인했습니다.</label><button id="runLexiconImport" type="button" disabled>검사한 원어 사전 DB 등록</button></div>
+        <pre id="lexiconImportPreview" class="import-preview">아직 검사한 원어 사전 파일이 없습니다.</pre>
+        <div id="lexiconImportStatus" class="import-status">원어 사전을 등록하면 뜻이 비어 있는 lemma에만 자동 연결됩니다.</div>
+      </div>
+      </details>
+    </section>
+
+    <section id="outlinePanel" class="panel full outline-panel">
+      <div class="section-head"><div><h2>설교 구조와 시간 배분</h2><p class="notice">시간 합계는 프로그램이 계산합니다. LM Studio는 등록된 본문 근거 안에서 핵심 메시지와 3대지 구조만 작성합니다.</p></div><div class="inline-actions"><button id="startLmStudio" type="button">1. LM Studio 서버 시작</button><button id="recoverLmStudio" type="button">2. 연결·모델 점검</button><button id="buildOutline" type="button">3. 3대지 만들기</button></div></div>
+      <div id="outlineStatus" class="meta">본문 연구 후 설교 구조를 만드세요. 구조 없이도 초안 생성은 가능하지만 검토를 권장합니다.</div>
+      <div id="lmRecoveryStatus" class="lm-recovery-status hidden" aria-live="polite"></div>
+      <div id="timePlan" class="time-plan"></div>
+      <div id="outlineSummary" class="outline-summary"></div>
+      <div id="outlinePoints" class="outline-points"></div>
+      <div class="preflight-box">
+        <div class="section-head"><div><h3>V40 설교 생성 Preflight</h3><p class="notice">모델 목록뿐 아니라 실제 LM Studio 추론 호출까지 확인합니다. 필수 조건 실패는 생성을 차단하고 원어·교리·RAG 권장 조건은 노랑으로 표시합니다.</p></div><button id="runPreflight" type="button">생성 전 최종 점검</button></div>
+        <div id="preflightStatus" class="import-status warn">최종 점검을 실행해야 설교 생성 버튼이 활성화됩니다.</div>
+        <div id="preflightSteps" class="preflight-steps"></div>
+      </div>
+      <button id="generate" class="primary" disabled>검증된 구조로 설교 초안 생성</button>
+      <p class="notice">목회자 검토 전 초안입니다. 15·20·25·30·40분 중 선택한 시간과 등록된 성경 근거를 유지하도록 제한합니다.</p>
+    </section>
+
+    <section id="resultPanel" class="panel full">
+      <div class="section-head"><h2>설교 원고와 근거 검증</h2><div class="export-actions"><button id="export" disabled>MD</button><button id="exportHtml" disabled>HTML</button><button id="exportWord" disabled>Word</button><button id="exportPdf" disabled>PDF</button><button id="saveSermon" disabled>버전 저장</button><button id="exportGroundingHtml" hidden>근거 보고서 HTML</button><button id="exportGroundingMd" hidden>근거 보고서 MD</button></div></div>
+      <div id="meta" class="meta">아직 생성된 설교문이 없습니다.</div>
+      <div id="auditBox" class="audit-box neutral">감사 기록은 설교 생성 후 표시됩니다.</div>
+      <section id="groundingDashboard" class="grounding-dashboard" aria-live="polite"><h3>근거 검증 요약</h3><div id="groundingSummary">검증 사용 안 함</div><div id="groundingDetails" class="grounding-details"></div></section>
+      <div class="quality-box"><h3>V40 생성후 통합 품질검사</h3><div id="qualitySummary" class="meta">설교 생성 후 성경·원어·교리·번역문·분량 검사가 표시됩니다.</div><div id="qualityChecks" class="quality-checks"></div><div id="qualityIssues" class="quality-issues"></div></div>
+      <details class="citation-box" open><summary>문장별 성경 근거 연결 · Citation Mapping</summary><div id="citationSummary">설교 생성 후 근거 연결 결과가 표시됩니다.</div><div id="citationResults" class="citation-results"></div></details>
+      <article id="output" class="output"></article>
+      <details id="sourcesBox"><summary>사용한 성경 근거 보기</summary><div id="sources"></div></details>
+    </section>
+
+    <section id="bibleDataPanel" class="panel full optional-panel">
+      <h2>성경 자료 추가</h2>
+      <p>사용권을 확인한 번역본, 히브리어·헬라어 자료를 직접 등록할 수 있습니다.</p>
+      <div class="import-wizard">
+        <div class="section-head"><div><h3>성경 자료 간편 가져오기</h3><p class="notice">자료를 고르고 파일만 선택하세요. 공개 성경 자료는 프로그램이 파일 형식을 자동 판별합니다. 원본 파일은 이 PC에서만 변환하며 인터넷에서 본문을 자동 수집하지 않습니다.</p></div><span class="wizard-count">V40</span></div>
+        <div class="import-steps"><span><b>1</b> 자료 선택</span><span><b>2</b> 원본 변환</span><span><b>3</b> 사용조건 확인</span><span><b>4</b> DB 등록</span><span><b>5</b> RAG 생성</span></div>
+        <div class="import-grid">
+          <label>자료 프리셋<select id="importPreset"><option value="">프리셋 불러오는 중…</option></select></label>
+          <label>번역/자료명<input id="importTranslation" placeholder="예: WEB / 정식허가본" readonly></label>
+          <label>언어<input id="importLanguage" placeholder="ko / en / he / grc" readonly></label>
+          <label>사용조건<input id="importLicense" placeholder="Public Domain / CC BY 4.0 / 허가번호" readonly></label>
+          <label>공식 출처 URL<input id="importSource" placeholder="https://..." readonly></label>
+        </div>
+        <div id="importPresetInfo" class="import-preset-info">공개 자료 프리셋 또는 정식 허가자료를 선택하세요.</div>
+        <div class="import-file-row">
+          <label>파일 형식<select id="bibleSourceFormat"><option value="auto">프로그램이 자동 판별</option><option value="usfm_zip">USFM ZIP · 여러 성경책</option><option value="json">JSON</option><option value="csv">CSV</option><option value="tsv">TSV</option><option value="usfm">USFM · 한 파일</option><option value="osis">OSIS / XML</option><option value="sblgnt_xml">SBLGNT 공식 XML</option></select><small id="bibleFormatHelp">공개자료는 자동 판별하므로 바꿀 필요가 없습니다.</small></label>
+          <label>성경 원본 파일<input id="bibleImportFile" type="file" accept=".zip,.json,.csv,.tsv,.usfm,.sfm,.xml,.osis,application/zip,application/json,text/plain,text/csv,text/tab-separated-values,application/xml,text/xml"></label>
+          <button id="previewBibleImport" type="button">원본 변환 · 미리보기</button>
+        </div>
+        <div id="bibleSimpleGuide" class="import-preset-info"><b>쉬운 사용법:</b> 위에서 자료를 선택하면 여기에서 어떤 파일을 골라야 하는지 알려드립니다.</div>
+        <details class="notice"><summary>고급 사용자용 지원 형식 보기</summary><p>다중 USFM ZIP, JSON, CSV/TSV, 단일 USFM(\id/\c/\v), OSIS/XML(verse osisID), SBLGNT 공식 XML(verse-number id). 최대 100,000구절/50MB.</p></details>
+        <p class="import-preset-info"><b>WEB 전체 가져오기:</b> eBible 공식 배포의 <code>engwebp_usfm.zip</code>을 압축 해제하지 않고 그대로 선택하세요. <code>*_read.txt</code>가 들어 있는 read-aloud ZIP은 성경 구절 DB용이 아니므로 V22가 구분하여 차단합니다.</p>
+        <pre id="bibleImportPreview" class="import-preview">아직 검사한 파일이 없습니다.</pre>
+        <label class="check import-confirm"><input id="confirmBibleLicense" type="checkbox"> 이 파일의 출처와 사용조건을 확인했으며, 로컬 DB에 저장할 권한이 있습니다.</label>
+        <div class="rag-actions"><button id="runBibleImport" type="button" disabled>검사한 자료 DB에 가져오기</button><button id="importToRag" type="button" disabled>RAG 설정으로 이동</button></div>
+        <div id="bibleImportStatus" class="import-status">자료를 선택하고 성경 원본 또는 USFM ZIP을 검사하세요.</div>
+      </div>
+      <div class="grid source-form">
+        <label>번역/자료명<input id="pTranslation" placeholder="예: WEB / Hebrew / Greek"></label>
+        <label>언어<input id="pLanguage" placeholder="ko / en / he / grc"></label>
+        <label>성경 참조<input id="pReference" placeholder="예: Isaiah 41:10"></label>
+        <label>사용조건<input id="pLicense" placeholder="예: Public Domain / 사용 허가 번호"></label>
+      </div>
+      <label>본문/원어 자료<textarea id="pText" rows="4"></textarea></label>
+      <button id="addPassage">자료 DB에 추가</button><span id="addMessage"></span>
+      <details class="source-guide"><summary>권장 공개 성경 자료</summary>
+        <p><b>WEB</b>: Public Domain · <b>WLC 히브리어 본문</b>: Public Domain · <b>OSHB 형태/lemma</b>: CC BY 4.0 · <b>SBLGNT</b>: CC BY 4.0. 원본 출처와 라이선스를 반드시 함께 기록하세요. OSHB 형태·lemma는 일반 성경 본문 Import가 아니라 아래의 원어 근거 기능에서 사용합니다.</p>
+      </details>
+    </section>
+
+    <section id="databasePanel" class="panel full database-panel optional-panel">
+      <div class="section-head"><div><h2>성경 DB 관리 대시보드</h2><p class="notice">번역본별 본문 수와 RAG 벡터를 확인합니다. 삭제는 해당 번역의 본문·RAG 벡터만 제거하며 사용권 기록은 보존합니다.</p></div><div class="db-actions"><button id="refreshDatabase" type="button">DB 새로고침</button><button id="checkDatabaseIntegrity" type="button">무결성 검사</button><button id="databaseToRag" type="button">RAG 설정으로 이동</button></div></div>
+      <div id="databaseSummary" class="db-summary">DB 상태를 불러오는 중입니다…</div>
+      <div id="databaseIntegrity" class="db-integrity">무결성 검사를 실행하면 SQLite·빈 본문·고아 벡터·사용권 상태를 확인합니다.</div>
+      <div class="db-table-wrap"><table class="db-table"><thead><tr><th>번역/자료</th><th>언어</th><th>본문</th><th>참조</th><th>RAG 벡터</th><th>사용권 등록</th><th>관리</th></tr></thead><tbody id="databaseTranslations"><tr><td colspan="7">불러오는 중…</td></tr></tbody></table></div>
+    </section>
+
+    <section id="backupPanel" class="panel full backup-panel optional-panel">
+      <div class="section-head"><div><h2>로컬 데이터 통합 백업 · 복원</h2><p class="notice">성경 DB, RAG 정보, 설교·버전·검토 기록, 외부 연구노트, NotebookLM·Drive 설정, 사용권과 낭독속도를 한 ZIP으로 보존합니다.</p></div><div class="db-actions"><button id="createBackup" type="button">지금 백업 만들기</button><button id="refreshBackups" type="button">백업 목록 새로고침</button></div></div>
+      <div id="backupStatus" class="db-integrity">백업 상태를 확인하는 중입니다…</div>
+      <div id="backupList" class="backup-list"></div>
+      <div class="restore-box">
+        <div><h3>백업 파일에서 복원</h3><p class="notice">복원 전에 현재 DB를 자동으로 한 번 더 백업합니다. 이 프로그램이 만든 V21 이후 통합 백업만 허용하며 ZIP 경로·해시·SQLite 무결성을 먼저 검사합니다.</p></div>
+        <label>통합 백업 ZIP<input id="restoreBackupFile" type="file" accept=".zip,application/zip"></label>
+        <button id="restoreBackup" type="button">검사 후 복원</button>
+      </div>
+      <p class="notice">사용자 지정 폰트 파일과 이미 만든 출력물은 이 DB 백업에 포함되지 않습니다. 필요한 경우 <code>fonts</code> 및 <code>exports</code> 폴더는 별도로 보관하세요.</p>
+    </section>
+
+    <section id="licensePanel" class="panel full optional-panel">
+      <h2>번역본 사용권 등록부</h2>
+      <p>저작권이 있는 번역본은 정식 허가 내용을 먼저 등록합니다. 전문 저장 허용이 꺼진 번역은 본문 DB 저장이 차단됩니다.</p>
+      <div class="original-grid">
+        <label>번역본명<input id="lTranslation" placeholder="예: 개역개정-허가본"></label>
+        <label>저작권자<input id="lHolder"></label>
+        <label>허가 상태<select id="lStatus"><option>licensed</option><option>public_domain</option><option>restricted</option></select></label>
+        <label>허가번호/계약 근거<input id="lPermission"></label>
+        <label>공식 출처 URL<input id="lSource"></label>
+        <label>비고<input id="lNotes"></label>
+        <label class="check license-check"><input id="lAllow" type="checkbox"> 전문 DB 저장 허용</label>
+      </div>
+      <button id="saveLicense">사용권 정보 저장</button><span id="licenseMessage"></span>
+    </section>
+
+    <section id="doctrinePanel" class="panel full optional-panel">
+      <h2>교단별 신앙고백·교리 문서 RAG</h2>
+      <p>공식 문서를 조항 단위로 등록합니다. RAG 인덱스를 다시 만들면 선택한 신학 전통의 자료만 설교 근거로 검색됩니다.</p>
+      <div class="original-grid">
+        <label>신학 전통<select id="dTradition"><option>공통</option><option>장로교</option><option>감리교</option><option>침례교</option><option>성결교</option><option>초교파 복음주의</option></select></label>
+        <label>문서명<input id="dTitle" placeholder="공식 문서명"></label>
+        <label>조항/섹션<input id="dSection"></label>
+        <label>공식 출처 URL<input id="dSource"></label>
+        <label>사용조건<input id="dLicense"></label>
+      </div>
+      <label>교리 문서 본문<textarea id="dText" rows="5"></textarea></label>
+      <button id="addDoctrine">교리 근거 추가</button><span id="doctrineMessage"></span>
+    </section>
+
+    <section id="savedPanel" class="panel full optional-panel">
+      <h2>설교 저장·불러오기·버전 비교</h2>
+      <div class="history-row"><select id="savedSermons"><option value="">저장된 설교 선택</option></select><button id="refreshSaved">목록 새로고침</button><button id="loadVersions">버전 보기</button></div>
+      <div class="history-row"><select id="versionA"><option value="">버전 A</option></select><select id="versionB"><option value="">버전 B</option></select><button id="loadVersion">선택 버전 불러오기</button><button id="compareVersion">A ↔ B 비교</button></div>
+      <pre id="versionDiff" class="diff-box">저장된 버전의 차이가 여기에 표시됩니다.</pre>
+      <div class="project-edit-box">
+        <h3>프로젝트 정보</h3>
+        <div class="review-grid"><label>예배일<input id="serviceDate" type="date"></label><label>설교 시리즈<input id="seriesName" placeholder="예: 믿음으로 걷는 삶"></label><label>설교자<input id="preacher" placeholder="이름"></label></div>
+        <label>준비 메모<textarea id="projectNotes" rows="2" placeholder="예배 순서, 적용 포인트, 추가 확인사항 등"></textarea></label>
+        <div class="history-row"><button id="saveProjectMeta">프로젝트 정보 저장</button><button id="finalPackage" disabled>최종 승인본 ZIP 패키지</button></div>
+      </div>
+      <div class="review-box">
+        <h3>목회자 검토·승인</h3>
+        <p class="notice">버전 A에 대해 기록합니다. 감사 상태가 <code>ready_for_review</code>이고 변경 요청 이력이 없는 버전만 승인할 수 있습니다.</p>
+        <div class="review-grid"><label>검토자<input id="reviewer" placeholder="이름"></label><label>판정<select id="reviewStatus"><option value="comment">댓글</option><option value="changes_requested">변경 요청</option><option value="approved">승인</option></select></label></div>
+        <label>검토 의견<textarea id="reviewComment" rows="3" placeholder="근거 확인, 수정 요청, 승인 의견 등을 기록하세요."></textarea></label>
+        <div class="history-row"><button id="submitReview">검토 기록</button><button id="refreshReview">검토 이력 새로고침</button><button id="reauditVersion">선택 버전 재감사</button><button id="lockVersion">승인본 최종 잠금</button></div>
+        <div id="reviewState" class="review-state">저장된 설교와 버전 A를 선택하세요.</div>
+        <div class="revision-box">
+          <h3>근거 기반 AI 수정 제안</h3>
+          <p class="notice">LM Studio는 현재 버전에 저장된 성경 근거만 사용해 제안합니다. 자동 덮어쓰기는 하지 않으며, 선택 반영 시 반드시 새 버전이 만들어지고 자동 재감사됩니다.</p>
+          <div class="history-row"><button id="generateSuggestions">수정 제안 만들기</button><button id="refreshSuggestions">제안 새로고침</button><button id="applySuggestions">선택 제안 새 버전에 반영</button></div>
+          <div id="suggestionMessage" class="meta">저장된 버전의 근거 확인 필요 문장을 대상으로 합니다.</div>
+          <div id="suggestionResults" class="suggestion-results"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <button id="backToTop" class="back-to-top" type="button" aria-label="페이지 맨 위로 이동" title="맨 위로">↑<span>맨 위로</span></button>
+  <script src="/static/app.js?v=40.9.10"></script>
+</body>
+</html>
