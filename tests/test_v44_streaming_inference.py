@@ -94,9 +94,21 @@ class V44StreamingInferenceTests(unittest.TestCase):
         ])
         client = LMStudioClient("http://127.0.0.1:12345/v1")
         with patch("app.core.urllib.request.urlopen", side_effect=[thinking, final]) as open_url:
-            self.assertEqual(client.chat("qwen/qwen3.5-9b", "system", "user"), "final sermon")
+            self.assertEqual(client.chat("ready-model", "system", "user"), "final sermon")
         retry_payload = json.loads(open_url.call_args_list[1].args[0].data.decode("utf-8"))
         self.assertEqual(retry_payload["chat_template_kwargs"], {"enable_thinking": False})
+
+    def test_qwen_generation_disables_thinking_before_first_request(self):
+        response = FakeStreamResponse([
+            b'data: {"choices":[{"delta":{"content":"direct sermon"}}]}\n\n',
+            b'data: [DONE]\n\n',
+        ])
+        client = LMStudioClient("http://127.0.0.1:12345/v1")
+        with patch("app.core.urllib.request.urlopen", return_value=response) as open_url:
+            self.assertEqual(client.chat("qwen/qwen3-8b", "system", "write sermon"), "direct sermon")
+        payload = json.loads(open_url.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["chat_template_kwargs"], {"enable_thinking": False})
+        self.assertTrue(payload["messages"][-1]["content"].endswith("/no_think"))
 
 
 if __name__ == "__main__":

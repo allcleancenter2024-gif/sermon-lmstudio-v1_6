@@ -288,6 +288,15 @@ class LMStudioClient:
         # reasoning models that budget can be consumed by Thinking before the
         # requested answer is emitted, so reserve an explicit answer budget.
         payload["max_tokens"] = max(1, int(max_tokens)) if max_tokens is not None else 4096
+        # Qwen3/Qwen3.5 defaults to a reasoning phase. For this application
+        # the answer must be a directly usable Korean sermon, and allowing the
+        # reasoning phase to consume the output budget is the failure shown in
+        # the UI. Keep the switch model-scoped so other providers retain their
+        # native chat template behavior.
+        qwen_reasoning_model = bool(re.search(r"(?:^|[/_-])qwen3(?:[./_-]|$)", model.lower()))
+        if qwen_reasoning_model:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+            payload["messages"][-1]["content"] = f"{user}\n\n/no_think"
         last_error: ConnectionError | None = None
         for attempt in range(2):
             try:
@@ -310,6 +319,13 @@ class LMStudioClient:
                 continue
             except ConnectionError as exc:
                 last_error = exc
+                if payload.get("chat_template_kwargs") and "LM Studio API HTTP 400" in str(exc) and "컨텍스트 한도 초과" not in str(exc):
+                    # Older OpenAI-compatible runtimes may reject the
+                    # template option. Retry without the extra field; the
+                    # /no_think switch remains in the user message for Qwen
+                    # runtimes that support the soft switch.
+                    payload.pop("chat_template_kwargs", None)
+                    continue
                 transient = "실제 추론 연결이 끊겼습니다" in str(exc)
                 if not transient or attempt:
                     raise
