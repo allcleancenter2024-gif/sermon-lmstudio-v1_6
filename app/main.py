@@ -1137,7 +1137,7 @@ def preflight_check(data: PreflightRequest):
 
 
 @app.post("/api/outline")
-def create_outline(data: SermonOutlineRequest):
+def create_outline(data: SermonOutlineRequest, request: Request = None):
     try:
         normalized_reference = normalize_reference(data.main_reference)
     except ValueError as exc:
@@ -1153,6 +1153,7 @@ def create_outline(data: SermonOutlineRequest):
     reading_cpm = data.reading_cpm or get_reading_cpm()
     time_plan = sermon_time_plan(data.minutes, reading_cpm)
     client = LMStudioClient()
+    client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
     try:
         model, _ = _select_generation_model(client, data.model)
         prompt_study = compact_outline_study(study)
@@ -1173,6 +1174,8 @@ def create_outline(data: SermonOutlineRequest):
         raise HTTPException(422, f"설교 구조 검증 실패: {exc}") from exc
     except (ConnectionError, RuntimeError) as exc:
         raise HTTPException(503, str(exc)) from exc
+    finally:
+        client.end_generation()
     return {
         "outline": outline, "time_plan": time_plan, "model": model,
         "reference": normalized_reference, "study_counts": study.get("counts", {}),
