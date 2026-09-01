@@ -11,10 +11,16 @@ from datetime import datetime
 from pathlib import Path
 
 from app.paths import RESOURCE_ROOT, USER_FONT_DIR
+from app.media_prompts import media_prompts_markdown
 
 
 ROOT = RESOURCE_ROOT
 FONT_DIR = RESOURCE_ROOT / "fonts"
+
+
+def sermon_with_media_prompts(sermon: str, meta: dict) -> str:
+    appendix = media_prompts_markdown(meta.get("media_prompts") if isinstance(meta, dict) else None)
+    return f"{sermon.rstrip()}\n\n{appendix}" if appendix else sermon
 
 
 def _font_path(filename: str) -> Path:
@@ -44,6 +50,7 @@ def dashboard_font_css() -> str:
 
 
 def dashboard_html(*, sermon: str, meta: dict, sources: list[dict]) -> str:
+    sermon = sermon_with_media_prompts(sermon, meta)
     esc = lambda value: html.escape(str(value or ""))
     cards = "".join(
         f'''<article class="source"><div><b>{esc(s['translation'])}</b><span>{esc(s['language'])}</span></div>
@@ -182,6 +189,7 @@ def pdf_environment_status() -> dict:
 
 
 def pdf_document_html(*, sermon: str, meta: dict, sources: list[dict]) -> str:
+    sermon = sermon_with_media_prompts(sermon, meta)
     esc = lambda v: html.escape(str(v or ""))
     notes = meta.get("original_notes", []) if isinstance(meta.get("original_notes", []), list) else []
     evidence = "".join(f"<tr><td>{esc(s.get('reference'))}</td><td>{esc(s.get('translation'))}</td><td>{esc(s.get('text'))}</td></tr>" for s in sources[:24])
@@ -228,6 +236,7 @@ def write_pdf(path: Path, *, sermon: str, meta: dict, sources: list[dict]) -> No
 
 def _write_pdf_reportlab(path: Path, *, sermon: str, meta: dict, sources: list[dict],
                          regular_font: Path, bold_font: Path) -> None:
+    sermon = sermon_with_media_prompts(sermon, meta)
     try:
         from reportlab.lib import colors
         from reportlab.lib.enums import TA_CENTER
@@ -274,6 +283,7 @@ def _write_pdf_reportlab(path: Path, *, sermon: str, meta: dict, sources: list[d
 
 
 def write_docx(path: Path, *, sermon: str, meta: dict) -> None:
+    sermon = sermon_with_media_prompts(sermon, meta)
     try:
         from docx import Document
         from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -336,10 +346,12 @@ def write_final_package(path: Path, *, sermon: str, meta: dict, sources: list[di
         html_path = temp / "dashboard.html"
         docx_path = temp / "sermon.docx"
         pdf_path = temp / "sermon.pdf"
-        md_path.write_text(sermon, encoding="utf-8")
+        md_path.write_text(sermon_with_media_prompts(sermon, package_meta), encoding="utf-8")
+        media_path = temp / "media_prompts.md"
+        media_path.write_text(media_prompts_markdown(package_meta.get("media_prompts")), encoding="utf-8")
         html_path.write_text(dashboard_html(sermon=sermon, meta=package_meta, sources=sources), encoding="utf-8")
         write_docx(docx_path, sermon=sermon, meta=package_meta)
-        manifest["files"] = ["sermon.md", "dashboard.html", "sermon.docx"]
+        manifest["files"] = ["sermon.md", "dashboard.html", "sermon.docx", "media_prompts.md"]
         study = package_meta.get("study_note") if isinstance(package_meta.get("study_note"), dict) else {}
         if str(study.get("note_markdown", "")).strip():
             study_path = temp / "study_note.md"

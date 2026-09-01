@@ -271,6 +271,12 @@ main>.panel.nav-selected{border-color:#3b8fc8;box-shadow:0 0 0 3px #8ec8ee66,0 1
 .readiness-integration { margin-top:16px; padding:14px; border:1px solid #dbe5e0; border-radius:12px; background:rgba(255,255,255,.72); }
 .readiness-integration h3 { margin:0 0 4px; }
 .readiness-integration .history-row label { flex:1; }
+.media-prompts-box { margin-top:18px; border:1px solid #dbe5e0; border-radius:12px; padding:14px; background:#fbfdfc; }
+.media-prompt-section { margin-top:12px; padding:14px; border:1px solid #dbe5e0; border-radius:10px; background:white; }
+.media-prompt-section h3 { margin:0 0 4px; color:#245d50; }
+.media-prompt-section small { color:#697a73; }
+.media-prompt-section details { margin-top:10px; padding-top:10px; }
+.media-prompt-section p { white-space:pre-wrap; font-size:13px; }
 .readiness-steps { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
 .readiness-step { position:relative; padding:10px 12px; border:1px solid #dbe5e0; border-radius:10px; background:white; }
 .readiness-step b,.readiness-step small { display:block; }

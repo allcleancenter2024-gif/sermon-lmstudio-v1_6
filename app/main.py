@@ -82,7 +82,7 @@ from app.core import (
 )
 from app.importers import MAX_ZIP_UPLOAD_BYTES, SUPPORTED_SOURCE_FORMATS, classify_original_language_source, convert_bible_source, convert_original_note_source, convert_lexicon_source, convert_usfm_zip, iter_oshb_zip_original_files
 from app.backup import BackupError, create_backup, list_backups, restore_backup
-from app.exporters import dashboard_html, pdf_environment_status, write_docx, write_pdf, write_final_package
+from app.exporters import dashboard_html, pdf_environment_status, sermon_with_media_prompts, write_docx, write_pdf, write_final_package
 from app.exporters_grounding import build_grounding_report_data, render_grounding_html, render_grounding_markdown, safe_report_stem
 from app.paths import RESOURCE_ROOT, USER_ROOT, EXPORTS_DIR, BACKUPS_DIR
 from app.auth import create_session, create_user, revoke_session, session_user, user_count, verify_password
@@ -1573,9 +1573,10 @@ def export_markdown(data: dict):
     text = str(data.get("text", "")).strip()
     if not text:
         raise HTTPException(400, "내보낼 설교문이 없습니다.")
+    meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = EXPORTS / f"sermon_{stamp}.md"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(sermon_with_media_prompts(text, meta), encoding="utf-8")
     return {"filename": path.name, "url": f"/downloads/{path.name}"}
 
 

@@ -16,6 +16,7 @@ from app.core import (
     validate_quotes,
 )
 from app.grounding.audit import audit_sermon
+from app.media_prompts import build_media_prompt_packet
 
 
 def generate_sermon_workflow(
@@ -101,6 +102,7 @@ def generate_sermon_workflow(
         "audit": audit,
         "citation_analysis": citation_analysis,
         "post_generation_quality": post_generation_quality,
+        "media_prompts": build_media_prompt_packet(sermon, passages, word_notes, doctrine_notes),
     }
     if web_grounding_meta and web_grounding_meta.get("enabled"):
         result["web_grounding"] = {**web_grounding_meta, "evidence": [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence]}
