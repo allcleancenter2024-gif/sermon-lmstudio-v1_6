@@ -97,6 +97,7 @@ from app.notebooklm import (
     set_drive_folder,
 )
 from app.github import github_readiness
+from app.project_summary import build_project_summary
 from app.services.sermon_service import generate_sermon_workflow
 from app.providers.web import WebEvidenceAdapter, HttpJsonWebSearchProvider, build_web_query, should_search_web, web_grounding_enabled
 from app.routers.health import router as health_router
@@ -587,6 +588,11 @@ def home(request: Request):
     enabled = os.getenv("GROUNDING_DASHBOARD_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
     report_enabled = os.getenv("GROUNDING_REPORT_EXPORT_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
     return html.replace("</head>", f"<script>window.GROUNDING_DASHBOARD_ENABLED={str(enabled).lower()};window.GROUNDING_REPORT_EXPORT_ENABLED={str(report_enabled).lower()};</script></head>")
+
+
+@app.get("/api/project-summary")
+def project_summary():
+    return build_project_summary(ROOT, APP_VERSION)
 
 
 # Compatibility implementations retained below; routes are registered by bible_router.
