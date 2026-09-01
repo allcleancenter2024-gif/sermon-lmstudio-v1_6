@@ -6,6 +6,7 @@ import http.client
 import json
 import re
 import socket
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -13,6 +14,15 @@ from dataclasses import dataclass
 
 from app.config import get_lmstudio_url, normalize_lmstudio_url
 from app.lmstudio_control import loaded_model_ids
+
+_ACTIVE_GENERATIONS: dict[str, "LMStudioClient"] = {}
+_ACTIVE_GENERATIONS_LOCK = threading.Lock()
+
+
+def cancel_generation(generation_id: str) -> bool:
+    with _ACTIVE_GENERATIONS_LOCK:
+        client = _ACTIVE_GENERATIONS.get(str(generation_id).strip())
+    return bool(client and client.cancel())
 
 @dataclass
 class LMStudioClient:
@@ -23,6 +33,32 @@ class LMStudioClient:
 
     def __post_init__(self) -> None:
         self.base_url = normalize_lmstudio_url(self.base_url) if self.base_url else get_lmstudio_url()
+        self._cancel_event = threading.Event()
+        self._active_response = None
+        self.generation_id = ""
+
+    def begin_generation(self, generation_id: str) -> None:
+        self.generation_id = str(generation_id or "").strip()
+        self._cancel_event.clear()
+        if self.generation_id:
+            with _ACTIVE_GENERATIONS_LOCK:
+                _ACTIVE_GENERATIONS[self.generation_id] = self
+
+    def end_generation(self) -> None:
+        if self.generation_id:
+            with _ACTIVE_GENERATIONS_LOCK:
+                _ACTIVE_GENERATIONS.pop(self.generation_id, None)
+        self._active_response = None
+
+    def cancel(self) -> bool:
+        self._cancel_event.set()
+        response = self._active_response
+        if response is not None:
+            try:
+                response.close()
+            except (AttributeError, OSError):
+                pass
+        return True
 
     def _request_url(self, method: str, url: str, payload: dict | None = None) -> dict:
         body = json.dumps(payload).encode("utf-8") if payload is not None else None
@@ -50,6 +86,10 @@ class LMStudioClient:
                     "근거자료는 자동 축약되지만 계속 발생하면 LM Studio에서 더 큰 Context Length로 모델을 다시 로드하세요."
                 ) from exc
             raise ConnectionError(f"LM Studio API HTTP {exc.code}: {detail or url}") from exc
+        except ValueError as exc:
+            if self._cancel_event.is_set():
+                raise RuntimeError("설교 생성이 사용자 요청으로 취소되었습니다.") from exc
+            raise
         except (urllib.error.URLError, TimeoutError, socket.timeout, ConnectionResetError,
                 BrokenPipeError, http.client.RemoteDisconnected) as exc:
             if "/chat/completions" in url:
@@ -200,6 +240,7 @@ class LMStudioClient:
         finish_reason = ""
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
+                self._active_response = response
                 content_type = str(response.headers.get("Content-Type", "")).lower()
                 if "text/event-stream" not in content_type:
                     raw = response.read().decode("utf-8")
@@ -212,6 +253,8 @@ class LMStudioClient:
                         raise RuntimeError("LM Studio 응답 형식을 해석하지 못했습니다.")
                     return text
                 for raw_line in response:
+                    if self._cancel_event.is_set():
+                        raise RuntimeError("설교 생성이 사용자 요청으로 취소되었습니다.")
                     line = raw_line.decode("utf-8", errors="replace").strip()
                     if not line or line.startswith(":") or not line.startswith("data:"):
                         continue

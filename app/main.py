@@ -100,6 +100,7 @@ from app.github import github_readiness
 from app.project_summary import build_project_summary
 from app.services.sermon_service import generate_sermon_workflow
 from app.providers.web import WebEvidenceAdapter, HttpJsonWebSearchProvider, build_web_query, should_search_web, web_grounding_enabled
+from app.providers.lmstudio import cancel_generation
 from app.routers.health import router as health_router
 from app.routers.settings import router as settings_router
 from app.routers.projects import router as projects_router
@@ -1369,7 +1370,7 @@ def reindex_rag(data: RagIndexRequest):
 
 
 @app.post("/api/sermons")
-def generate_sermon(data: SermonRequest):
+def generate_sermon(data: SermonRequest, request: Request = None):
     if db_stats()["passages"] < 1:
         raise HTTPException(
             400,
@@ -1378,6 +1379,7 @@ def generate_sermon(data: SermonRequest):
     if not data.main_reference.strip():
         raise HTTPException(400, "근거 기반 설교를 생성하려면 중심본문을 입력하세요.")
     client = LMStudioClient()
+    client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
     reading_cpm = data.reading_cpm or get_reading_cpm()
     if data.main_reference:
         packet = _collect_research_packet(data, client)
@@ -1442,8 +1444,18 @@ def generate_sermon(data: SermonRequest):
         )
     except (ConnectionError, RuntimeError) as exc:
         raise HTTPException(503, str(exc)) from exc
+    finally:
+        client.end_generation()
     result["research_packet"] = packet
     return result
+
+
+@app.post("/api/sermons/cancel")
+def cancel_sermon_generation(request: Request):
+    generation_id = request.headers.get("X-Generation-Id", "").strip()
+    if not generation_id:
+        raise HTTPException(400, "취소할 생성 작업 ID가 없습니다.")
+    return {"ok": cancel_generation(generation_id), "generation_id": generation_id}
 
 
 @app.post("/api/sermons/save")
