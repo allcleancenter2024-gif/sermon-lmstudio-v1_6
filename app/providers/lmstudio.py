@@ -284,12 +284,30 @@ class LMStudioClient:
             ],
             "temperature": temperature,
         }
-        if max_tokens is not None:
-            payload["max_tokens"] = max(1, int(max_tokens))
+        # LM Studio may otherwise apply a small server-side default. On
+        # reasoning models that budget can be consumed by Thinking before the
+        # requested answer is emitted, so reserve an explicit answer budget.
+        payload["max_tokens"] = max(1, int(max_tokens)) if max_tokens is not None else 4096
         last_error: ConnectionError | None = None
         for attempt in range(2):
             try:
                 return self._stream_chat_once(payload)
+            except RuntimeError as exc:
+                # Qwen3/Qwen3.5-compatible templates can return only
+                # reasoning_content when Thinking is enabled. Never expose
+                # that internal trace as a sermon; retry once with the
+                # LM Studio-supported template switch that requests answer
+                # content directly. The retry is deliberately limited to this
+                # exact condition so malformed responses and other failures
+                # remain actionable instead of being hidden.
+                if "내부 추론만 생성" not in str(exc) or payload.get("chat_template_kwargs"):
+                    raise
+                payload = {
+                    **payload,
+                    "chat_template_kwargs": {"enable_thinking": False},
+                    "max_tokens": max(int(payload.get("max_tokens", 4096)), 4096),
+                }
+                continue
             except ConnectionError as exc:
                 last_error = exc
                 transient = "실제 추론 연결이 끊겼습니다" in str(exc)

@@ -66,7 +66,8 @@ class CoreTests(unittest.TestCase):
             {"id": "google/gemma-4-31b-qat"},
             {"id": "text-embedding-nomic-embed-text-v1.5"},
         ]}
-        catalog = client.model_catalog()
+        with patch("app.core.loaded_model_ids", return_value=None):
+            catalog = client.model_catalog()
         self.assertEqual(catalog["source"], "openai_compatible")
         self.assertEqual(catalog["generation_models"], ["google/gemma-4-31b-qat"])
         self.assertEqual(catalog["embedding_models"], ["text-embedding-nomic-embed-text-v1.5"])

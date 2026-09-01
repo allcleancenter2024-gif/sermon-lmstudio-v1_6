@@ -140,6 +140,13 @@
         <label>임베딩 모델<select id="embeddingModel"><option value="">임베딩 모델 선택</option></select></label>
         <div class="rag-actions"><button id="buildRag" type="button">RAG 인덱스 만들기</button><button id="goBibleData" type="button">성경 자료 추가로 이동</button><button id="refreshRagSetup" type="button">준비상태 다시 확인</button><label class="check"><input id="useRag" type="checkbox" checked> 설교 생성에 RAG 사용</label></div>
         <p id="ragStatus">RAG 상태 확인 중…</p>
+        <section id="ragProgress" class="rag-progress" aria-live="polite" aria-atomic="false" hidden>
+          <div class="rag-progress-head"><div><span class="eyebrow-dark">INDEX BUILD · LOCAL RAG</span><h3 id="ragProgressTitle">RAG 인덱스를 준비하고 있습니다</h3></div><strong id="ragProgressPercent">0%</strong></div>
+          <div class="rag-progress-track" role="progressbar" aria-label="RAG 인덱스 추정 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="ragProgressBar"></span></div>
+          <div class="rag-progress-meta"><span id="ragProgressStage">대기 중</span><span id="ragProgressModel">임베딩 모델 확인 중</span></div>
+          <div class="rag-progress-grid"><div><small>현재 작업</small><b id="ragProgressSummary">성경·교리 자료를 벡터 검색용으로 준비합니다.</b></div><div><small>경과 시간</small><b id="ragProgressElapsed">0초</b></div><div><small>처리 상태</small><b id="ragProgressDetail">요청을 준비 중입니다.</b></div></div>
+          <p class="rag-progress-note">LM Studio와 인덱서가 배치별 완료율을 현재 API로 전달하지 않으므로 단계와 경과 시간을 바탕으로 표시합니다. 완료 응답을 받으면 100%로 확정합니다.</p>
+        </section>
       </div>
       <button id="recommendBtn" type="button">중심본문 관련구절 자동추천</button>
       <div id="recommendResults" class="recommend-results"></div>

@@ -82,6 +82,22 @@ class V44StreamingInferenceTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "내부 추론만 생성"):
                 client.chat("ready-model", "system", "user")
 
+    def test_reasoning_only_stream_retries_with_thinking_disabled(self):
+        thinking = FakeStreamResponse([
+            b'data: {"choices":[{"delta":{"reasoning_content":"thinking"}}]}\n\n',
+            b'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n',
+            b'data: [DONE]\n\n',
+        ])
+        final = FakeStreamResponse([
+            b'data: {"choices":[{"delta":{"content":"final sermon"}}]}\n\n',
+            b'data: [DONE]\n\n',
+        ])
+        client = LMStudioClient("http://127.0.0.1:12345/v1")
+        with patch("app.core.urllib.request.urlopen", side_effect=[thinking, final]) as open_url:
+            self.assertEqual(client.chat("qwen/qwen3.5-9b", "system", "user"), "final sermon")
+        retry_payload = json.loads(open_url.call_args_list[1].args[0].data.decode("utf-8"))
+        self.assertEqual(retry_payload["chat_template_kwargs"], {"enable_thinking": False})
+
 
 if __name__ == "__main__":
     unittest.main()
