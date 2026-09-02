@@ -227,7 +227,7 @@ class LMStudioClient:
         return choice.get("text", "") if isinstance(choice, dict) and isinstance(choice.get("text"), str) else ""
 
     def _stream_chat_once(self, payload: dict) -> str:
-        """Collect an OpenAI-compatible SSE response without a whole-job timeout."""
+        """Collect SSE while rejecting any model-side reasoning output."""
         url = self.base_url.rstrip("/") + "/chat/completions"
         req = urllib.request.Request(
             url,
@@ -248,6 +248,10 @@ class LMStudioClient:
                         result = json.loads(raw)
                     except json.JSONDecodeError as exc:
                         raise RuntimeError("LM Studio가 JSON/SSE가 아닌 응답을 반환했습니다.") from exc
+                    if isinstance(result, dict) and self._response_contains_reasoning(result):
+                        raise RuntimeError(
+                            "모델이 추론 비활성화 정책을 위반해 reasoning 응답을 보냈습니다. 생성 결과를 폐기했습니다."
+                        )
                     text = self._stream_piece(result) if isinstance(result, dict) else ""
                     if not text:
                         raise RuntimeError("LM Studio 응답 형식을 해석하지 못했습니다.")
@@ -273,12 +277,27 @@ class LMStudioClient:
                                 isinstance(delta, dict)
                                 and (delta.get("reasoning_content") or delta.get("reasoning"))
                             )
+                            if reasoning_seen:
+                                try:
+                                    response.close()
+                                except (AttributeError, OSError):
+                                    pass
+                                raise RuntimeError(
+                                    "모델이 추론 비활성화 정책을 위반해 reasoning 응답을 보냈습니다. "
+                                    "해당 생성을 중지했습니다. LM Studio에서 Thinking을 끈 모델 설정을 확인하세요."
+                                )
                             finish_reason = str(choice.get("finish_reason") or finish_reason)
                         except (KeyError, IndexError, TypeError):
                             pass
                         piece = self._stream_piece(event)
                         if piece:
                             pieces.append(piece)
+                        # Some OpenAI-compatible local servers emit the final
+                        # finish_reason but delay or omit the separate
+                        # ``data: [DONE]`` marker. Do not keep the request
+                        # open after a completed choice has been received.
+                        if finish_reason and not piece:
+                            break
         except urllib.error.HTTPError as exc:
             try:
                 detail = exc.read().decode("utf-8", errors="replace")[:500]
@@ -315,6 +334,20 @@ class LMStudioClient:
             raise RuntimeError("LM Studio 스트리밍 응답에 생성된 본문이 없습니다.")
         return text
 
+    @staticmethod
+    def _response_contains_reasoning(result: dict) -> bool:
+        choices = result.get("choices") if isinstance(result, dict) else None
+        if not isinstance(choices, list):
+            return False
+        for choice in choices:
+            if not isinstance(choice, dict):
+                continue
+            delta = choice.get("delta") if isinstance(choice.get("delta"), dict) else {}
+            message = choice.get("message") if isinstance(choice.get("message"), dict) else {}
+            if delta.get("reasoning_content") or delta.get("reasoning") or message.get("reasoning_content") or message.get("reasoning"):
+                return True
+        return False
+
     def chat(
         self, model: str, system: str, user: str, temperature: float = 0.35,
         max_tokens: int | None = None,
@@ -331,44 +364,24 @@ class LMStudioClient:
         # reasoning models that budget can be consumed by Thinking before the
         # requested answer is emitted, so reserve an explicit answer budget.
         payload["max_tokens"] = max(1, int(max_tokens)) if max_tokens is not None else 4096
-        # Qwen3/Qwen3.5 defaults to a reasoning phase. For this application
-        # the answer must be a directly usable Korean sermon, and allowing the
-        # reasoning phase to consume the output budget is the failure shown in
-        # the UI. Keep the switch model-scoped so other providers retain their
-        # native chat template behavior.
-        qwen_reasoning_model = bool(re.search(r"(?:^|[/_-])qwen3(?:[./_-]|$)", model.lower()))
-        if qwen_reasoning_model:
-            payload["chat_template_kwargs"] = {"enable_thinking": False}
-            payload["messages"][-1]["content"] = f"{user}\n\n/no_think"
+        # Enforce the no-thinking policy for every model. If a model/runtime
+        # rejects this contract, chat() fails closed instead of retrying without
+        # the flag and silently allowing reasoning.
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
+        payload["messages"][-1]["content"] = f"{user}\n\nReturn only the final answer. Do not emit reasoning or thinking content.\n/no_think"
         last_error: ConnectionError | None = None
         for attempt in range(2):
             try:
                 return self._stream_chat_once(payload)
-            except RuntimeError as exc:
-                # Qwen3/Qwen3.5-compatible templates can return only
-                # reasoning_content when Thinking is enabled. Never expose
-                # that internal trace as a sermon; retry once with the
-                # LM Studio-supported template switch that requests answer
-                # content directly. The retry is deliberately limited to this
-                # exact condition so malformed responses and other failures
-                # remain actionable instead of being hidden.
-                if "내부 추론만 생성" not in str(exc) or payload.get("chat_template_kwargs"):
-                    raise
-                payload = {
-                    **payload,
-                    "chat_template_kwargs": {"enable_thinking": False},
-                    "max_tokens": max(int(payload.get("max_tokens", 4096)), 4096),
-                }
-                continue
+            except RuntimeError:
+                raise
             except ConnectionError as exc:
                 last_error = exc
                 if payload.get("chat_template_kwargs") and "LM Studio API HTTP 400" in str(exc) and "컨텍스트 한도 초과" not in str(exc):
-                    # Older OpenAI-compatible runtimes may reject the
-                    # template option. Retry without the extra field; the
-                    # /no_think switch remains in the user message for Qwen
-                    # runtimes that support the soft switch.
-                    payload.pop("chat_template_kwargs", None)
-                    continue
+                    raise RuntimeError(
+                        "선택 모델이 추론 비활성화 옵션을 지원하지 않아 실행을 중지했습니다. "
+                        "LM Studio에서 Thinking을 끈 채팅 템플릿을 선택하거나 다른 모델을 사용하세요."
+                    ) from exc
                 transient = "실제 추론 연결이 끊겼습니다" in str(exc)
                 if not transient or attempt:
                     raise
@@ -383,15 +396,18 @@ class LMStudioClient:
         result = self._inference_request_with_retry(
             {
                 "model": model,
-                "messages": [{"role": "user", "content": "OK"}],
+                "messages": [{"role": "user", "content": "Return only OK. Do not emit reasoning.\n/no_think"}],
                 "temperature": 0,
                 "max_tokens": 1,
                 "stream": False,
+                "chat_template_kwargs": {"enable_thinking": False},
             }, retries=1,
         )
         choices = result.get("choices")
         if not isinstance(choices, list) or not choices:
             raise RuntimeError("LM Studio 추론 점검 응답에 choices가 없습니다. 모델을 다시 로드하세요.")
+        if self._response_contains_reasoning(result):
+            raise RuntimeError("선택 모델이 추론 비활성화 정책을 위반했습니다. 해당 모델을 사용할 수 없습니다.")
 
     def embeddings(self, model: str, texts: list[str]) -> list[list[float]]:
         if not texts:

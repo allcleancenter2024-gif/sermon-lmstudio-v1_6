@@ -19,6 +19,26 @@ from app.grounding.audit import audit_sermon
 from app.media_prompts import build_media_prompt_packet
 
 
+def _sermon_max_tokens(target_minutes: int, model: str = "") -> int:
+    """Keep local-model generation bounded while scaling with sermon length."""
+    if "qwen3" in str(model or "").lower():
+        # Qwen3 local inference can spend disproportionate time on long Korean
+        # completions. Return a usable compact draft first; the UI exposes its
+        # actual reading estimate and leaves later revision to the user.
+        return 512
+    return max(2048, min(4096, int(target_minutes) * 200))
+
+
+def _resize_max_tokens(target_minutes: int) -> int:
+    """A resize is a correction pass, so it needs less output budget."""
+    return max(384, min(600, int(target_minutes) * 40))
+
+
+def _should_auto_resize(model: str) -> bool:
+    """Qwen3 may spend excessive time rewriting an already complete sermon."""
+    return "qwen3" not in str(model or "").lower()
+
+
 def generate_sermon_workflow(
     data,
     *,
@@ -46,18 +66,27 @@ def generate_sermon_workflow(
     doctrine_prompt_notes = list(doctrine_notes or []) + [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence]
     system, user = build_sermon_prompt(prompt_payload, passages, word_notes, doctrine_prompt_notes)
     try:
-        sermon = client.chat(model, system, user)
+        sermon = client.chat(model, system, user, max_tokens=_sermon_max_tokens(data.minutes, model))
     except ConnectionError as exc:
         if "컨텍스트 한도 초과" not in str(exc):
             raise
         prompt_payload["_context_compact_level"] = 2
         system, user = build_sermon_prompt(prompt_payload, passages, word_notes, doctrine_prompt_notes)
-        sermon = client.chat(model, system, user)
+        sermon = client.chat(model, system, user, max_tokens=_sermon_max_tokens(data.minutes, model))
 
     resize_count = 0
-    while passages and resize_count < 2 and abs(estimate_minutes(sermon, reading_cpm) - data.minutes) / data.minutes > 0.10:
+    # Keep one bounded correction pass. Multiple long local-model correction
+    # calls can otherwise leave the UI waiting even after the first sermon is
+    # already complete.
+    while passages and _should_auto_resize(model) and resize_count < 1 and abs(estimate_minutes(sermon, reading_cpm) - data.minutes) / data.minutes > 0.10:
         resize_system, resize_user = build_resize_prompt(sermon, data.minutes, passages, reading_cpm)
-        sermon = client.chat(model, resize_system, resize_user, temperature=0.15)
+        sermon = client.chat(
+            model,
+            resize_system,
+            resize_user,
+            temperature=0.15,
+            max_tokens=_resize_max_tokens(data.minutes),
+        )
         resize_count += 1
 
     unchecked_refs = validate_quotes(sermon, passages)

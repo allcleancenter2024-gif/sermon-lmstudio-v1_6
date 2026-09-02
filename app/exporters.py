@@ -322,6 +322,48 @@ def write_docx(path: Path, *, sermon: str, meta: dict) -> None:
     doc.save(path)
 
 
+def write_hwpx(path: Path, *, sermon: str, meta: dict) -> None:
+    """Create a portable HWPX document from the vendored OWPML base template."""
+    template = RESOURCE_ROOT / "app" / "assets" / "hwpx_base"
+    section_path = template / "Contents" / "section0.xml"
+    if not section_path.exists():
+        raise RuntimeError("HWPX 기본 템플릿을 찾을 수 없습니다.")
+    escaped = lambda value: html.escape(str(value or ""), quote=False)
+    title = escaped(meta.get("topic") or "설교문")
+    reference = escaped(meta.get("main_reference") or "")
+    lines = [title, f"중심본문: {reference}" if reference else "", ""] + sermon_with_media_prompts(sermon, meta).splitlines()
+    paragraphs = []
+    for index, line in enumerate(lines, start=1000000100):
+        text = line.strip()
+        if text.startswith("### "):
+            text = text[4:]
+        elif text.startswith("## "):
+            text = text[3:]
+        elif text.startswith("# "):
+            text = text[2:]
+        content = f"<hp:t>{escaped(text)}</hp:t>" if text else "<hp:t/>"
+        paragraphs.append(
+            f'<hp:p id="{index}" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+            f'<hp:run charPrIDRef="0">{content}</hp:run></hp:p>'
+        )
+    section = section_path.read_text(encoding="utf-8")
+    section = section.replace("</hs:sec>", "\n" + "\n".join(paragraphs) + "\n</hs:sec>", 1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w") as archive:
+        # HWPX requires the mimetype entry to be the first, uncompressed entry.
+        archive.writestr("mimetype", (template / "mimetype").read_bytes(), compress_type=zipfile.ZIP_STORED)
+        for source in sorted(template.rglob("*")):
+            if not source.is_file():
+                continue
+            name = source.relative_to(template).as_posix()
+            if name == "mimetype":
+                continue
+            elif name == "Contents/section0.xml":
+                archive.writestr(name, section.encode("utf-8"), compress_type=zipfile.ZIP_DEFLATED)
+            else:
+                archive.write(source, name, compress_type=zipfile.ZIP_DEFLATED)
+
+
 def write_final_package(path: Path, *, sermon: str, meta: dict, sources: list[dict], project: dict) -> dict:
     package_meta = dict(meta)
     package_meta["project"] = dict(project)

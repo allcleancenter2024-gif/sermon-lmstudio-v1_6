@@ -60,5 +60,6 @@ set "LAUNCHER_EXIT=%ERRORLEVEL%"
 if not "%LAUNCHER_EXIT%"=="0" (
   echo.
   echo Launcher stopped with exit code %LAUNCHER_EXIT%.
+  pause
 )
 exit /b %LAUNCHER_EXIT%

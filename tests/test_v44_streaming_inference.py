@@ -61,7 +61,7 @@ class V44StreamingInferenceTests(unittest.TestCase):
                 client.chat("ready-model", "system", "user")
         self.assertEqual(open_url.call_count, 1)
 
-    def test_reasoning_chunks_are_ignored_until_final_content_arrives(self):
+    def test_reasoning_chunks_abort_even_when_final_content_follows(self):
         response = FakeStreamResponse([
             b'data: {"choices":[{"delta":{"reasoning_content":"thinking"}}]}\n\n',
             b'data: {"choices":[{"delta":{"content":"final answer"}}]}\n\n',
@@ -69,7 +69,17 @@ class V44StreamingInferenceTests(unittest.TestCase):
         ])
         client = LMStudioClient("http://127.0.0.1:12345/v1")
         with patch("app.core.urllib.request.urlopen", return_value=response):
-            self.assertEqual(client.chat("ready-model", "system", "user"), "final answer")
+            with self.assertRaisesRegex(RuntimeError, "추론 비활성화 정책"):
+                client.chat("ready-model", "system", "user")
+
+    def test_finish_reason_without_done_marker_ends_stream(self):
+        response = FakeStreamResponse([
+            b'data: {"choices":[{"delta":{"content":"completed answer"}}]}\n\n',
+            b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+        ])
+        client = LMStudioClient("http://127.0.0.1:12345/v1")
+        with patch("app.core.urllib.request.urlopen", return_value=response):
+            self.assertEqual(client.chat("ready-model", "system", "user"), "completed answer")
 
     def test_reasoning_only_stream_has_actionable_error(self):
         response = FakeStreamResponse([
@@ -79,7 +89,7 @@ class V44StreamingInferenceTests(unittest.TestCase):
         ])
         client = LMStudioClient("http://127.0.0.1:12345/v1")
         with patch("app.core.urllib.request.urlopen", return_value=response):
-            with self.assertRaisesRegex(RuntimeError, "내부 추론만 생성"):
+            with self.assertRaisesRegex(RuntimeError, "추론 비활성화 정책"):
                 client.chat("ready-model", "system", "user")
 
     def test_reasoning_only_stream_retries_with_thinking_disabled(self):
@@ -94,9 +104,9 @@ class V44StreamingInferenceTests(unittest.TestCase):
         ])
         client = LMStudioClient("http://127.0.0.1:12345/v1")
         with patch("app.core.urllib.request.urlopen", side_effect=[thinking, final]) as open_url:
-            self.assertEqual(client.chat("ready-model", "system", "user"), "final sermon")
-        retry_payload = json.loads(open_url.call_args_list[1].args[0].data.decode("utf-8"))
-        self.assertEqual(retry_payload["chat_template_kwargs"], {"enable_thinking": False})
+            with self.assertRaisesRegex(RuntimeError, "추론 비활성화 정책"):
+                client.chat("ready-model", "system", "user")
+        self.assertEqual(open_url.call_count, 1)
 
     def test_qwen_generation_disables_thinking_before_first_request(self):
         response = FakeStreamResponse([

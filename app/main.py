@@ -82,9 +82,14 @@ from app.core import (
 )
 from app.importers import MAX_ZIP_UPLOAD_BYTES, SUPPORTED_SOURCE_FORMATS, classify_original_language_source, convert_bible_source, convert_original_note_source, convert_lexicon_source, convert_usfm_zip, iter_oshb_zip_original_files
 from app.backup import BackupError, create_backup, list_backups, restore_backup
-from app.exporters import dashboard_html, pdf_environment_status, sermon_with_media_prompts, write_docx, write_pdf, write_final_package
+from app.exporters import dashboard_html, pdf_environment_status, sermon_with_media_prompts, write_docx, write_hwpx, write_pdf, write_final_package
 from app.exporters_grounding import build_grounding_report_data, render_grounding_html, render_grounding_markdown, safe_report_stem
 from app.paths import RESOURCE_ROOT, USER_ROOT, EXPORTS_DIR, BACKUPS_DIR
+from app.sblgnt_installer import installer_status, start_install
+from app.services.greek_morphology_service import get_greek_tokens, lemma_search, normalized_search
+from app.services.textual_apparatus_service import get_apparatus_notes
+from app.alignment import align_reference
+from app.services.greek_text_service import get_greek_text
 from app.auth import create_session, create_user, revoke_session, session_user, user_count, verify_password
 from app.references import expand_reference, normalize_reference, parse_reference, primary_original_language, validate_primary_original_language
 from app.notebooklm import (
@@ -1228,6 +1233,62 @@ def reference_info(reference: str):
     }
 
 
+@app.get("/api/bible/greek/{book}/{chapter}/{verse}")
+def greek_tokens_api(book: str, chapter: int, verse: int):
+    try:
+        return get_greek_tokens(f"{book} {chapter}:{verse}")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/bible/greek/{book}/{chapter}/{verse}/morphology")
+def greek_morphology_api(book: str, chapter: int, verse: int):
+    try:
+        return get_greek_tokens(f"{book} {chapter}:{verse}")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/bible/greek/{book}/{chapter}/{verse}/apparatus")
+def greek_apparatus_api(book: str, chapter: int, verse: int):
+    try:
+        return get_apparatus_notes(f"{book} {chapter}:{verse}")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/bible/greek/{book}/{chapter}/{verse}/alignment")
+def greek_alignment_api(book: str, chapter: int, verse: int):
+    try:
+        return align_reference(f"{book} {chapter}:{verse}")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/bible/greek/{book}/{chapter}/{verse}/text")
+def greek_text_api(book: str, chapter: int, verse: int):
+    try:
+        return get_greek_text(f"{book} {chapter}:{verse}")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/bible/greek/search/lemma")
+def greek_lemma_search_api(lemma: str, limit: int = 50):
+    try:
+        return lemma_search(lemma, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/bible/greek/search/normalized")
+def greek_normalized_search_api(word: str, limit: int = 50):
+    try:
+        return normalized_search(word, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @app.post("/api/import/original-notes/convert")
 def convert_original_notes_file(data: OriginalNoteConvertRequest):
     try:
@@ -1311,6 +1372,17 @@ def classify_original_language_file(data: OriginalLanguageClassifyRequest):
         "unknown": {"target": "inspect", "format": "auto", "label": "형식 검사 필요"},
     }
     return {"ok": True, "role": role, **targets[role]}
+
+
+@app.post("/api/import/original-language/install-official")
+def install_official_original_language():
+    """Start the official SBLGNT/MorphGNT staging and import job."""
+    return {"ok": True, **start_install()}
+
+
+@app.get("/api/import/original-language/install-official/status")
+def official_original_language_status():
+    return {"ok": True, **installer_status()}
 
 
 @app.post("/api/import/original-lexicon")
@@ -1588,6 +1660,31 @@ def export_final_package(sermon_id: int, version: int):
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
     return {"filename": path.name, "url": f"/downloads/{path.name}", "manifest": manifest}
+
+
+@app.post("/api/sermons/{sermon_id}/versions/{version}/export-hwpx")
+def export_final_hwpx(sermon_id: int, version: int):
+    """Export only an approved, integrity-checked final version as HWPX."""
+    version_item = next((item for item in sermon_versions(sermon_id) if item["version"] == version), None)
+    if not version_item:
+        raise HTTPException(404, "HWPX로 만들 설교 버전을 찾을 수 없습니다.")
+    state = sermon_review_state(sermon_id, version)
+    if not state.get("locked") or not (state.get("lock") or {}).get("integrity_ok"):
+        raise HTTPException(409, "무결성이 확인된 최종 잠금 승인본만 HWPX로 출력할 수 있습니다.")
+    meta = dict(version_item.get("metadata") or {})
+    meta["audit"] = state.get("audit")
+    meta["review_state"] = state
+    meta["topic"] = meta.get("topic") or next((item["topic"] for item in list_sermons() if item["id"] == sermon_id), "설교문")
+    reading_cpm = int(meta.get("reading_cpm") or get_reading_cpm())
+    meta["reading_cpm"] = reading_cpm
+    meta["minutes_estimate"] = estimate_minutes(version_item["content"], reading_cpm)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = EXPORTS / f"sermon_final_{sermon_id}_v{version}_{stamp}.hwpx"
+    try:
+        write_hwpx(path, sermon=version_item["content"], meta=meta)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return {"filename": path.name, "url": f"/downloads/{path.name}", "format": "hwpx", "version": version}
 
 
 def export_markdown(data: dict):

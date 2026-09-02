@@ -22,6 +22,7 @@ from app.lmstudio_control import start_local_server
 APP_URL = "http://127.0.0.1:8000"
 RUNTIME_URL = APP_URL + "/api/runtime"
 APP_PORT = 8000
+PORT_SEARCH_LIMIT = 20
 
 
 def _version_tuple(value: str) -> tuple[int, int, int] | None:
@@ -49,7 +50,7 @@ def _is_sermon_runtime(info: dict | None) -> bool:
         str(info.get("app_version") or "").strip()
         and isinstance(minutes, list)
         and 15 in minutes
-        and str(info.get("local_url") or "").startswith("http://127.0.0.1:8000")
+        and str(info.get("local_url") or "").startswith(APP_URL)
     )
 
 
@@ -62,6 +63,27 @@ def _port_in_use(host: str = "127.0.0.1", port: int = APP_PORT) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(0.4)
         return sock.connect_ex((host, port)) == 0
+
+
+def _port_can_bind(host: str = "127.0.0.1", port: int = APP_PORT) -> bool:
+    """Check the real bind operation, including Windows excluded-port ranges."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+        return True
+    except OSError:
+        return False
+
+
+def _select_app_port() -> int:
+    """Keep port 8000 when possible, otherwise select a free local fallback."""
+    if _port_can_bind(port=APP_PORT):
+        return APP_PORT
+    for candidate in range(APP_PORT + 1, APP_PORT + PORT_SEARCH_LIMIT + 1):
+        if not _port_in_use(port=candidate) and _port_can_bind(port=candidate):
+            return candidate
+    return APP_PORT
 
 
 def _windows_listener_pids(port: int = APP_PORT) -> list[int]:
@@ -168,6 +190,8 @@ def _prepare_lmstudio_server() -> None:
 
 
 def main() -> int:
+    global APP_PORT, APP_URL, RUNTIME_URL
+
     if "--version" in sys.argv[1:]:
         print(APP_VERSION)
         return 0
@@ -203,14 +227,21 @@ def main() -> int:
         input("Press Enter to close...")
         return 3
 
+    selected_port = _select_app_port()
+    if selected_port != APP_PORT:
+        APP_PORT = selected_port
+        APP_URL = f"http://127.0.0.1:{APP_PORT}"
+        RUNTIME_URL = APP_URL + "/api/runtime"
+        print(f"Port 8000 is not bindable on this Windows system. Using local port {APP_PORT}.")
+
     print(f"Sermon LM Studio V{APP_VERSION}")
-    print("Local web app: http://127.0.0.1:8000")
+    print(f"Local web app: {APP_URL}")
     print("LM Studio default: http://127.0.0.1:12345/v1")
     print("Keep this window open while using the application.\n")
     _prepare_lmstudio_server()
     threading.Thread(target=_open_browser_when_ready, daemon=True).start()
     try:
-        uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+        uvicorn.run(app, host="127.0.0.1", port=APP_PORT, log_level="info")
     except OSError as exc:
         print(f"Server startup failed: {exc}")
         input("Press Enter to close...")
