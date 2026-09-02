@@ -1,0 +1,8 @@
+@page { size: A4; margin: 16mm; }
+@media print {
+  body { background: #fff; }
+  .page-break-before { break-before: page; }
+  table { break-inside: auto; }
+  tr { break-inside: avoid; }
+  pre, code { white-space: pre-wrap; overflow-wrap: anywhere; }
+}

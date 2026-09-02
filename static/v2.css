@@ -132,6 +132,11 @@ main{margin-left:calc((100vw - min(1180px,100vw - 40px))/2 + 248px);margin-right
 @media(max-width:1250px){main{margin-left:248px;margin-right:20px}.side-menu-collapsed main{margin-left:20px;margin-right:20px}.quick-nav-inner{margin-left:248px}.side-menu-collapsed .quick-nav-inner{margin-left:auto}}
 @media(max-width:800px){.side-menu{top:96px;width:250px;transform:translateX(-100%)}body:not(.side-menu-collapsed) .side-menu{transform:translateX(0)}.menu-toggle{display:block!important}.quick-nav-inner{margin-left:0!important}main,.side-menu-collapsed main{margin-left:20px;margin-right:20px}}
 
+@media(max-width:800px){.quick-nav-inner,.workflow-rail-inner{min-width:0}}
+@media(max-width:800px){.history-row{min-width:0;flex-wrap:wrap}.history-row>label,.history-row>select,.history-row>button{min-width:0;flex:1 1 100%}.history-row select{width:100%}}
+@media(max-width:800px){main>.panel{overflow-x:hidden}}
+@media(max-width:900px){header{padding-left:20px}.side-menu{top:96px;width:250px;padding-top:16px;transform:translateX(-100%)}body:not(.side-menu-collapsed) .side-menu{transform:translateX(0)}.menu-toggle{display:inline-flex!important}.quick-nav-inner{margin-left:0!important}.workflow-rail-inner{margin-left:0;margin-right:0;padding:8px 12px}.workflow-rail-label,.workflow-rail-legend{display:none}main,.side-menu-collapsed main{margin-left:20px;margin-right:20px}.history-row{min-width:0;flex-wrap:wrap}.history-row>label,.history-row>select,.history-row>button{min-width:0;flex:1 1 100%}.history-row select{width:100%}main>.panel{overflow-x:hidden}}
+
 /* V40.9.6: keep the title clear of the persistent menu and make reopen reachable */
 body{overflow-x:hidden}
 header{position:relative;z-index:60;padding-left:calc(max(24px,calc((100vw - 1180px)/2)) + 248px)}
@@ -141,6 +146,24 @@ header{position:relative;z-index:60;padding-left:calc(max(24px,calc((100vw - 118
 .side-menu-collapsed header{padding-left:max(24px,calc((100vw - 1180px)/2))}
 @media(max-width:1250px){header{padding-left:268px}.side-menu-collapsed header{padding-left:20px}.quick-nav-inner{margin-left:248px}.side-menu-collapsed .quick-nav-inner{margin-left:auto}}
 @media(max-width:800px){header{padding-left:20px}.side-menu{top:96px;padding-top:16px}.quick-nav-inner{margin-left:0!important}.menu-toggle{display:inline-flex!important}}
+
+/* Make the persistent reopen control explicit when the side menu is collapsed. */
+.menu-toggle[aria-expanded="false"]::after{content:" 열기"}
+
+/* Workflow rail: quiet sequence, with one clear current step. */
+.workflow-rail{background:transparent;border-bottom:0}
+.workflow-rail-label{font-weight:900;color:#173f72}
+.workflow-rail-steps button{border:0;border-radius:8px;background:transparent;color:#173f72;font-weight:850;padding:6px 8px}
+.workflow-rail-steps button b{width:22px;height:22px;background:#d8e3ef;color:#173f72;font-weight:900}
+.workflow-rail-steps button.completed{background:transparent;border-color:transparent;color:#315a7c}
+.workflow-rail-steps button.completed b{background:#d8e3ef;color:#315a7c}
+.workflow-rail-steps button.attention,.workflow-rail-steps button.pending{background:transparent;border-color:transparent;color:#173f72}
+.workflow-rail-steps button.attention b,.workflow-rail-steps button.pending b{background:#d8e3ef;color:#173f72}
+.workflow-rail-steps button.current{background:#123f78;border:0.8mm solid #123f78;color:#fff;box-shadow:0 4px 12px #123f7838}
+.workflow-rail-steps button.current b{background:#fff;color:#123f78}
+.workflow-rail-steps button:hover,.workflow-rail-steps button:focus-visible{background:#e7eff8;color:#123f78;outline:3px solid #80b9d655;outline-offset:1px}
+.workflow-rail-steps button.current:hover,.workflow-rail-steps button.current:focus-visible{background:#0d315f;color:#fff}
+.workflow-rail-steps i{color:#7891aa;font-weight:700}
 
 /* V40.9.6 navigation selection and release dashboard */
 .side-menu-body button.active{background:#dff1ff;border-color:#8abfe3;color:#164b72;box-shadow:inset 3px 0 #3b8fc8}
@@ -427,6 +450,17 @@ main>.panel.nav-selected{border-color:#3b8fc8;box-shadow:0 0 0 3px #8ec8ee66,0 1
 .preview-toolbar{display:flex;align-items:end;gap:10px;margin:14px 0}
 .preview-toolbar label{flex:1;margin:0}
 .preview-toolbar button{min-height:42px;white-space:nowrap}
+.workflow-rail{background:transparent;border-bottom:0}
+.workflow-rail-label{font-weight:900;color:#173f72}
+.workflow-rail-steps button{border:0;border-radius:8px;background:transparent;color:#173f72;font-weight:850;padding:6px 8px}
+.workflow-rail-steps button b{width:22px;height:22px;background:#d8e3ef;color:#173f72;font-weight:900}
+.workflow-rail-steps button.completed,.workflow-rail-steps button.attention,.workflow-rail-steps button.pending{background:transparent;border-color:transparent;color:#173f72}
+.workflow-rail-steps button.completed b,.workflow-rail-steps button.attention b,.workflow-rail-steps button.pending b{background:#d8e3ef;color:#173f72}
+.workflow-rail-steps button.current{background:#123f78;border:0.8mm solid #123f78;color:#fff;box-shadow:0 4px 12px #123f7838}
+.workflow-rail-steps button.current b{background:#fff;color:#123f78}
+.workflow-rail-steps button:hover,.workflow-rail-steps button:focus-visible{background:#e7eff8;color:#123f78;outline:3px solid #80b9d655;outline-offset:1px}
+.workflow-rail-steps button.current:hover,.workflow-rail-steps button.current:focus-visible{background:#0d315f;color:#fff}
+.workflow-rail-steps i{color:#7891aa;font-weight:700}
 .preview-status{padding:11px 13px;border-left:4px solid #d9b33e;background:#fff8df;color:#765d1d;font-size:13px}
 .sermon-preview{max-width:900px;margin:18px auto 0;padding:34px 42px;background:#fff;border:1px solid #cbdceb;box-shadow:0 12px 30px #284c7014}
 .sermon-preview header{padding:0 0 18px;background:none;color:#1d355f;border-bottom:1px solid #dce6ef}

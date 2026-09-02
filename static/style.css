@@ -36,3 +36,6 @@ body.simple-ui .optional-panel:not(.force-show){display:none}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #68aa9655;outline-offset:2px}
 @media(max-width:800px){.quick-nav-inner{padding:8px 12px}.quick-nav-title{display:none}.quick-nav .view-toggle{margin-left:0}.back-to-top{right:14px;bottom:14px}.back-to-top span{display:none}.section-head{gap:12px;flex-direction:column}.section-head>button,.section-head .inline-actions{width:100%}.inline-actions{display:grid;grid-template-columns:1fr}.inline-actions button{width:100%}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.back-to-top{transition:none}}
+
+/* Allow responsive grid items to shrink below their content's intrinsic width. */
+main,.panel{min-width:0}
