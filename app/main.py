@@ -90,7 +90,7 @@ from app.services.greek_morphology_service import get_greek_tokens, lemma_search
 from app.services.textual_apparatus_service import get_apparatus_notes
 from app.alignment import align_reference
 from app.services.greek_text_service import get_greek_text
-from app.auth import create_session, create_user, revoke_session, session_user, user_count, verify_password
+from app.auth import session_user, user_count
 from app.references import expand_reference, normalize_reference, parse_reference, primary_original_language, validate_primary_original_language
 from app.notebooklm import (
     create_pack,
@@ -112,6 +112,7 @@ from app.routers.projects import router as projects_router
 from app.routers.doctrine import router as doctrine_router
 from app.routers.bible import router as bible_router
 from app.routers.exports import router as exports_router
+from app.routers.auth import AuthRequest, build_auth_router
 from app.lmstudio_control import find_lms_cli, local_api_port, port_is_open, start_local_server
 
 
@@ -131,6 +132,7 @@ app.include_router(exports_router)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 AUTH_DB = USER_ROOT / "auth.sqlite3"
 user_count(AUTH_DB)  # initialize the separate auth store without touching sermon DB
+app.include_router(build_auth_router(AUTH_DB))
 
 PUBLIC_BIBLE_IMPORT_PRESETS = [
     {
@@ -183,43 +185,6 @@ async def runtime_identity_headers(request, call_next):
     response.headers["X-Sermon-App-Version"] = APP_VERSION
     if request.url.path == "/" or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-store, max-age=0"
-    return response
-
-
-class AuthRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=80)
-    password: str = Field(min_length=10, max_length=256)
-
-
-@app.get("/api/auth/status")
-def auth_status(request: Request):
-    username = session_user(request.cookies.get("sermon_session"))
-    return {"authenticated": bool(username), "username": username, "setup_required": user_count(AUTH_DB) == 0}
-
-
-@app.post("/api/auth/register")
-def auth_register(data: AuthRequest):
-    if user_count(AUTH_DB) != 0:
-        raise HTTPException(403, "초기 계정이 이미 등록되어 있습니다.")
-    if not create_user(AUTH_DB, data.username, data.password):
-        raise HTTPException(409, "사용자명이 이미 존재합니다.")
-    return {"ok": True, "message": "초기 계정이 생성되었습니다. 로그인하세요."}
-
-
-@app.post("/api/auth/login")
-def auth_login(data: AuthRequest):
-    if not verify_password(AUTH_DB, data.username, data.password):
-        raise HTTPException(401, "사용자명 또는 비밀번호가 올바르지 않습니다.")
-    response = JSONResponse({"ok": True, "username": data.username.strip().lower()})
-    response.set_cookie("sermon_session", create_session(data.username), httponly=True, samesite="lax", secure=False, max_age=43200, path="/")
-    return response
-
-
-@app.post("/api/auth/logout")
-def auth_logout(request: Request):
-    revoke_session(request.cookies.get("sermon_session"))
-    response = JSONResponse({"ok": True})
-    response.delete_cookie("sermon_session", path="/")
     return response
 
 
