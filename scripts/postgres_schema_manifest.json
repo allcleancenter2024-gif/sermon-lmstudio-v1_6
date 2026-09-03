@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "migration_id": "postgres_restore_verified_v1",
+  "required_tables": [
+    "denominations",
+    "doctrine_sources",
+    "doctrine_documents",
+    "source_snapshots",
+    "ingestion_jobs",
+    "object_storage_records",
+    "schema_versions"
+  ],
+  "required_extensions": ["vector"]
+}

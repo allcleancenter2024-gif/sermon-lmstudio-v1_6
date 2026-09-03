@@ -328,6 +328,17 @@ def _ensure_original_notes_table(db_path: Path) -> None:
                 license_note TEXT NOT NULL DEFAULT ''
             );
             CREATE INDEX IF NOT EXISTS idx_original_reference ON original_word_notes(reference);
+            CREATE TABLE IF NOT EXISTS original_pronunciations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reference TEXT NOT NULL, language TEXT NOT NULL, lemma TEXT NOT NULL,
+                surface_form TEXT NOT NULL, token_index INTEGER NOT NULL,
+                transliteration TEXT NOT NULL DEFAULT '',
+                pronunciation_scheme TEXT NOT NULL DEFAULT '',
+                pronunciation_source TEXT NOT NULL DEFAULT 'derived from registered surface form',
+                source TEXT NOT NULL DEFAULT '', license_note TEXT NOT NULL DEFAULT '',
+                UNIQUE(source, reference, language, token_index)
+            );
+            CREATE INDEX IF NOT EXISTS idx_original_pronunciation_reference ON original_pronunciations(reference);
             """
         )
 

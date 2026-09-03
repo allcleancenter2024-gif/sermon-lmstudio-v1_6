@@ -55,6 +55,8 @@ from app.constants import (
     SUPPORTED_SERMON_MINUTES,
     WORLD_AFFAIRS_RE,
 )
+from app.services.original_pronunciation import pronunciation, pronunciation_scheme
+from app.migrations import apply_admin_workflow_migration, apply_license_review_migration, apply_migrations, apply_phase1_data_model_migration, apply_phase2_ingestion_migration
 
 
 @contextmanager
@@ -128,6 +130,21 @@ def init_db(db_path: Path = DB_PATH) -> None:
                 license_note TEXT NOT NULL DEFAULT ''
             );
             CREATE INDEX IF NOT EXISTS idx_original_reference ON original_word_notes(reference);
+            CREATE TABLE IF NOT EXISTS original_pronunciations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reference TEXT NOT NULL,
+                language TEXT NOT NULL,
+                lemma TEXT NOT NULL,
+                surface_form TEXT NOT NULL,
+                token_index INTEGER NOT NULL,
+                transliteration TEXT NOT NULL DEFAULT '',
+                pronunciation_scheme TEXT NOT NULL DEFAULT '',
+                pronunciation_source TEXT NOT NULL DEFAULT 'derived from registered surface form',
+                source TEXT NOT NULL DEFAULT '',
+                license_note TEXT NOT NULL DEFAULT '',
+                UNIQUE(source, reference, language, token_index)
+            );
+            CREATE INDEX IF NOT EXISTS idx_original_pronunciation_reference ON original_pronunciations(reference);
             CREATE TABLE IF NOT EXISTS original_lexicon (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 language TEXT NOT NULL,
@@ -253,6 +270,11 @@ def init_db(db_path: Path = DB_PATH) -> None:
             con.execute("ALTER TABLE rag_embeddings ADD COLUMN vector_blob BLOB")
         if "norm" not in columns:
             con.execute("ALTER TABLE rag_embeddings ADD COLUMN norm REAL")
+    apply_migrations(db_path)
+    apply_admin_workflow_migration(db_path)
+    apply_license_review_migration(db_path)
+    apply_phase1_data_model_migration(db_path)
+    apply_phase2_ingestion_migration(db_path)
 
 
 def import_json(path: Path, db_path: Path = DB_PATH) -> int:
@@ -398,7 +420,28 @@ def _enrich_original_notes(rows: list[dict], con: sqlite3.Connection) -> list[di
 def original_notes(reference: str, db_path: Path = DB_PATH) -> list[dict]:
     rows = fetch_original_note_rows(reference, db_path)
     with _connect(db_path) as con:
-        return _enrich_original_notes(rows, con)
+        enriched = _enrich_original_notes(rows, con)
+        try:
+            wanted = {normalize_reference(str(row.get("reference", ""))) for row in enriched}
+            pronunciation_rows = con.execute(
+                """SELECT reference, language, lemma, surface_form, token_index,
+                          transliteration, pronunciation_scheme, pronunciation_source, source, license_note
+                   FROM original_pronunciations ORDER BY reference, language, token_index"""
+            ).fetchall()
+        except sqlite3.OperationalError:
+            pronunciation_rows = []
+            wanted = set()
+        by_key = {}
+        for row in pronunciation_rows:
+            if row[0] in wanted:
+                by_key.setdefault((row[0], row[1], row[2]), []).append({
+                    "surface_form": row[3], "token_index": row[4], "transliteration": row[5],
+                    "pronunciation_scheme": row[6], "pronunciation_source": row[7],
+                    "source": row[8], "license_note": row[9],
+                })
+        for item in enriched:
+            item["pronunciations"] = by_key.get((item.get("reference"), item.get("language"), item.get("lemma")), [])
+        return enriched
 
 
 def original_language_coverage(reference: str, db_path: Path = DB_PATH) -> dict:
@@ -424,7 +467,10 @@ def original_language_coverage(reference: str, db_path: Path = DB_PATH) -> dict:
             sources.add(str(item["source"]).strip())
         if str(item.get("gloss", "")).strip():
             glossed += 1
-        if str(item.get("transliteration", "")).strip():
+        if str(item.get("transliteration", "")).strip() or any(
+            str(pronunciation_item.get("transliteration", "")).strip()
+            for pronunciation_item in item.get("pronunciations", [])
+        ):
             transliterated += 1
     missing = [verse for verse in wanted if verse not in covered]
     total = len(wanted)
@@ -485,6 +531,7 @@ def import_original_notes(items: list[dict], source: str, license_note: str, db_
                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
                 fresh,
             )
+        _insert_pronunciations(con, items, source, license_note)
     return {"imported": len(fresh), "skipped_existing": len(normalized) - len(fresh)}
 
 
@@ -532,7 +579,40 @@ def import_original_note_batches(batches, source: str, license_note: str, db_pat
                     fresh,
                 )
                 imported += len(fresh)
+            _insert_pronunciations(con, items, source, license_note)
     return {"imported": imported, "skipped_existing": skipped, "processed": processed}
+
+
+def _insert_pronunciations(con, items: list[dict], source: str, license_note: str) -> None:
+    """Persist source surface forms independently from deduplicated word notes."""
+    rows = []
+    fallback_indexes = {}
+    for item in items:
+        surface = str(item.get("surface_form", "")).strip()
+        language = str(item.get("language", "")).strip()
+        if not surface or language not in {"he", "arc", "grc"}:
+            continue
+        reference = normalize_reference(str(item.get("reference", "")))
+        key = (reference, language)
+        token_index = int(item.get("token_index") or 0)
+        if token_index < 1:
+            fallback_indexes[key] = fallback_indexes.get(key, 0) + 1
+            token_index = fallback_indexes[key]
+        else:
+            fallback_indexes[key] = max(fallback_indexes.get(key, 0), token_index)
+        rows.append((reference, language, str(item.get("lemma", "")).strip(), surface, token_index,
+                     pronunciation(surface, language), pronunciation_scheme(language), source, license_note))
+    if rows:
+        con.executemany(
+            """INSERT INTO original_pronunciations
+               (reference, language, lemma, surface_form, token_index, transliteration,
+                pronunciation_scheme, source, license_note)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(source, reference, language, token_index) DO UPDATE SET
+                 lemma=excluded.lemma, surface_form=excluded.surface_form,
+                 transliteration=excluded.transliteration,
+                 pronunciation_scheme=excluded.pronunciation_scheme,
+                 license_note=excluded.license_note""", rows)
 
 
 def passage_context(reference: str, db_path: Path = DB_PATH) -> list[dict]:

@@ -90,7 +90,10 @@ from app.services.greek_morphology_service import get_greek_tokens, lemma_search
 from app.services.textual_apparatus_service import get_apparatus_notes
 from app.alignment import align_reference
 from app.services.greek_text_service import get_greek_text
-from app.auth import session_user, user_count
+from app.services.original_language_dashboard import original_language_dashboard
+from app.auth import is_admin, session_user, user_count
+from app.doctrine_workflow import fetch_indexable_doctrine_chunks, transition_document
+from app.doctrine_rag import search_approved_doctrine
 from app.references import expand_reference, normalize_reference, parse_reference, primary_original_language, validate_primary_original_language
 from app.notebooklm import (
     create_pack,
@@ -194,6 +197,7 @@ class SermonRequest(BaseModel):
     main_reference: str = Field(default="", max_length=80)
     audience: str = "전 연령"
     tradition: str = "초교파 복음주의"
+    denomination_code: str = Field(default="", max_length=40)
     minutes: Literal[15, 20, 25, 30, 40] = DEFAULT_SERMON_MINUTES
     model: str = ""
     embedding_model: str = ""
@@ -372,6 +376,7 @@ class ResearchPacketRequest(BaseModel):
     details: str = Field(default="", max_length=3000)
     main_reference: str = Field(min_length=2, max_length=80)
     tradition: str = Field(default="초교파 복음주의", max_length=100)
+    denomination_code: str = Field(default="", max_length=40)
     embedding_model: str = Field(default="", max_length=300)
     use_rag: bool = True
 
@@ -427,6 +432,7 @@ def _collect_research_packet(data, client: LMStudioClient) -> dict:
     search_mode = "문자검색"
     search_results = search_passages(query, limit=32)
     doctrine_notes = []
+    doctrine_search_mode = "사용 안 함"
     rag = rag_stats()
     if data.use_rag and data.embedding_model and data.embedding_model in rag["models"]:
         try:
@@ -436,13 +442,22 @@ def _collect_research_packet(data, client: LMStudioClient) -> dict:
             search_mode = "문자검색(자동 복귀)"
     if data.use_rag and data.embedding_model and data.embedding_model in rag["doctrine_models"]:
         try:
-            doctrine_notes = doctrine_search(query, data.tradition, client, data.embedding_model, limit=6)
+            denomination_code = getattr(data, "denomination_code", "").strip()
+            if denomination_code:
+                doctrine_notes = search_approved_doctrine(query, client, data.embedding_model, denomination_code, DB_PATH, limit=6, include_common=True)
+                doctrine_search_mode = "승인 교단 V2"
+            else:
+                doctrine_notes = doctrine_search(query, data.tradition, client, data.embedding_model, limit=6)
+                doctrine_search_mode = "기존 전통 RAG"
         except (ConnectionError, RuntimeError, ValueError):
             doctrine_notes = []
+            doctrine_search_mode = "교리 검색 오류(근거 제외)"
     packet = build_research_packet(data.main_reference, search_results, doctrine_notes, tradition=data.tradition)
     packet["search_mode"] = search_mode
     packet["embedding_model"] = data.embedding_model
     packet["tradition"] = data.tradition
+    packet["denomination_code"] = getattr(data, "denomination_code", "").strip()
+    packet["doctrine_search_mode"] = doctrine_search_mode
     packet["social_context_policy"] = build_social_context_policy(data.topic, data.details)
     return packet
 
@@ -488,7 +503,7 @@ def _preflight_result(data: PreflightRequest) -> dict:
     elif database.get("passages", 0):
         packet_data = ResearchPacketRequest(
             topic=data.topic, details=data.details, main_reference=reference, tradition=data.tradition,
-            embedding_model=data.embedding_model, use_rag=data.use_rag,
+            embedding_model=data.embedding_model, denomination_code=getattr(data, "denomination_code", ""), use_rag=data.use_rag,
         )
         packet = _collect_research_packet(packet_data, client)
         ready = bool(packet.get("readiness", {}).get("generation_ready"))
@@ -864,6 +879,11 @@ def bulk_import(data: BulkImportRequest):
 
 def database_dashboard():
     return bible_database_dashboard()
+
+
+@app.get("/api/original-language/dashboard")
+def original_language_dashboard_api():
+    return original_language_dashboard()
 
 
 def database_integrity():
@@ -1447,7 +1467,9 @@ def generate_sermon(data: SermonRequest, request: Request = None):
                 search_mode = "문자검색(자동 복귀)"
         if data.use_rag and data.embedding_model and data.embedding_model in rag_stats()["doctrine_models"]:
             try:
-                doctrine_notes = doctrine_search(query, data.tradition, client, data.embedding_model, limit=6)
+                denomination_code = data.denomination_code.strip()
+                doctrine_notes = (search_approved_doctrine(query, client, data.embedding_model, denomination_code, DB_PATH, limit=6, include_common=True)
+                    if denomination_code else doctrine_search(query, data.tradition, client, data.embedding_model, limit=6))
             except (ConnectionError, RuntimeError, ValueError):
                 doctrine_notes = []
     clean_outline = None

@@ -1,0 +1,27 @@
+services:
+  sermon-lmstudio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sermon-lmstudio
+    restart: unless-stopped
+    # Preserve the application's localhost-only LM Studio policy.
+    # Docker Desktop for Windows must have Host Networking enabled.
+    network_mode: host
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SERMON_USER_ROOT: /app
+      SERMON_LMSTUDIO_URL: ${SERMON_LMSTUDIO_URL:-http://127.0.0.1:12345/v1}
+    volumes:
+      - ./data:/app/data
+      - ./exports:/app/exports
+      - ./backups:/app/backups
+      - ./fonts:/app/fonts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/runtime', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

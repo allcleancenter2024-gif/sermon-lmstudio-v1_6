@@ -11,6 +11,9 @@ build/
 dist/
 
 # Local credentials and large/private runtime databases
+.env
+.env.*
+!.env.example
 auth.sqlite3
 data/bible.db
 

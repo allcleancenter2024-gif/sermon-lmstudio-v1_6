@@ -391,7 +391,19 @@ def _normalize_original_items(items: list[dict]) -> list[dict]:
             "gloss": _clean(lowered.get("gloss") or lowered.get("meaning")),
             "morphology": _clean(lowered.get("morphology") or lowered.get("morph")),
         }
-        key = (reference, language.casefold(), lemma.casefold(), item["morphology"].casefold())
+        surface_form = _clean(lowered.get("surface_form") or lowered.get("surface") or lowered.get("text_form") or lowered.get("word_form"))
+        if surface_form:
+            item["surface_form"] = surface_form
+        token_index = lowered.get("token_index") or lowered.get("position")
+        if token_index not in (None, ""):
+            try:
+                item["token_index"] = int(token_index)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{index}번째 원어 항목의 token_index가 올바르지 않습니다.") from exc
+        # Native tokenized sources may legitimately repeat the same lemma and
+        # morphology in one verse; token_index keeps those occurrences distinct.
+        occurrence = item.get("token_index") if surface_form else None
+        key = (reference, language.casefold(), lemma.casefold(), item["morphology"].casefold(), occurrence)
         if key in seen:
             raise ValueError(f"중복 원어 근거가 있습니다: {reference} · {lemma}")
         seen.add(key)
@@ -417,6 +429,7 @@ def _dedupe_native_original_items(items: list[dict]) -> list[dict]:
 
 def _morphgnt_original_items(content: str) -> list[dict]:
     items = []
+    token_indexes = {}
     for line_no, raw in enumerate(content.lstrip("\ufeff").splitlines(), 1):
         line = raw.strip()
         if not line:
@@ -428,13 +441,17 @@ def _morphgnt_original_items(content: str) -> list[dict]:
         book_no, chapter, verse = int(code[:2]), int(code[2:4]), int(code[4:6])
         if not 1 <= book_no <= len(_MORPHGNT_BOOKS) or chapter < 1 or verse < 1:
             raise ValueError(f"MorphGNT {line_no}번째 줄의 책/장/절 코드가 올바르지 않습니다: {code}")
+        reference = f"{_MORPHGNT_BOOKS[book_no - 1]} {chapter}:{verse}"
+        token_indexes[reference] = token_indexes.get(reference, 0) + 1
         items.append({
-            "reference": f"{_MORPHGNT_BOOKS[book_no - 1]} {chapter}:{verse}",
+            "reference": reference,
             "language": "grc",
             "lemma": fields[-1],
             "transliteration": "",
             "gloss": "",
             "morphology": f"{part_of_speech} {parsing_code}",
+            "surface_form": fields[3],
+            "token_index": token_indexes[reference],
         })
     return _dedupe_native_original_items(items)
 
@@ -453,6 +470,7 @@ def _oshb_osis_original_items(content: str) -> list[dict]:
         if len(parts) < 3 or not parts[1].isdigit() or not parts[2].isdigit():
             continue
         reference = f"{parts[0]} {parts[1]}:{parts[2]}"
+        token_index = 0
         for word in verse.iter():
             if word.tag.rsplit("}", 1)[-1] != "w":
                 continue
@@ -460,6 +478,7 @@ def _oshb_osis_original_items(content: str) -> list[dict]:
             if not lemma:
                 continue
             morph = _clean(word.attrib.get("morph"))
+            token_index += 1
             # OSHB morphology uses A for Biblical Aramaic and H for Hebrew when present.
             language = "arc" if morph.startswith("A") else "he"
             items.append({
@@ -469,10 +488,12 @@ def _oshb_osis_original_items(content: str) -> list[dict]:
                 "transliteration": "",
                 "gloss": "",
                 "morphology": morph,
+                "surface_form": "".join(word.itertext()).strip(),
+                "token_index": token_index,
             })
     if not items:
         raise ValueError("OSHB OSIS/XML에서 lemma가 있는 <w> 단어를 찾지 못했습니다.")
-    return _dedupe_native_original_items(items)
+    return items
 
 
 def iter_oshb_zip_original_files(data: bytes):
@@ -508,7 +529,15 @@ def iter_oshb_zip_original_files(data: bytes):
                 raise ValueError("OSHB ZIP 압축 해제 크기가 100MB 제한을 초과합니다.")
             if info.compress_size and info.file_size / info.compress_size > MAX_ZIP_COMPRESSION_RATIO:
                 raise ValueError("비정상적으로 압축률이 높은 OSHB ZIP 항목이 있어 중단했습니다.")
-            if not info.is_dir() and path.suffix.lower() == ".xml" and "wlc" in {part.casefold() for part in path.parts}:
+            parts_lower = {part.casefold() for part in path.parts}
+            filename_lower = path.name.casefold()
+            official_root_layout = (
+                len(path.parts) == 2
+                and path.parts[0].casefold().startswith("oshb-v.")
+                and filename_lower != "VerseMap.xml".casefold()
+                and not path.parts[0].casefold().startswith("__macosx")
+            )
+            if not info.is_dir() and path.suffix.lower() == ".xml" and ("wlc" in parts_lower or official_root_layout):
                 candidates.append(info)
         if not candidates:
             raise ValueError("OSHB ZIP에서 wlc/*.xml 성경책 파일을 찾지 못했습니다. 공식 MorphHB/OSHB 배포 ZIP인지 확인하세요.")
