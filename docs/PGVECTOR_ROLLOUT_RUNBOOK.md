@@ -61,6 +61,17 @@ Gate 0~2를 통과해도 운영 전환은 자동으로 수행하지 않습니다
 - 장애 시 SQLite 복귀 확인
 - 관리자 승인 기록
 
+### Gate 4: Canary readiness audit
+
+운영 전환 전에는 격리 DB에서 readiness audit를 실행합니다. Audit는 다음을 모두 통과해야 `PASS`를 반환합니다.
+
+- `rag_pgvector_v1` migration ID 기록 존재
+- canary SQLite 원본 건수와 pgvector model별 적재 건수 일치
+- 각 질의의 상위 결과 ID 순서 완전 일치
+- 각 pgvector 검색 지연시간이 설정된 예산 이내
+
+어느 하나라도 실패하면 결과는 `BLOCKED`이며, backend 전환이나 환경변수 변경을 수행하지 않습니다.
+
 ## 검증 실행
 
 테스트 서비스는 다음 Compose 파일에서 별도 관리합니다.
@@ -76,6 +87,14 @@ docker compose -f docker-compose.minio-test.yml ps
 $env:RUN_PGVECTOR_SEARCH_COMPARISON = "1"
 $env:PGVECTOR_DATABASE_URL = "postgresql://sermon_user:<TEST_PASSWORD>@127.0.0.1:15433/sermon_pgvector_test"
 .\.venv\Scripts\python.exe -m pytest -q tests\test_pgvector_search_comparison_integration.py
+```
+
+readiness audit 통합 검증은 별도 플래그로 실행합니다.
+
+```powershell
+$env:RUN_PGVECTOR_READINESS_INTEGRATION = "1"
+$env:PGVECTOR_DATABASE_URL = "postgresql://sermon_user:<TEST_PASSWORD>@127.0.0.1:15433/sermon_pgvector_test"
+.\.venv\Scripts\python.exe -m pytest -q tests\test_pgvector_readiness_integration.py
 ```
 
 일반 회귀 테스트는 pgvector 환경변수 없이 실행하여 운영 기본값을 확인합니다.
@@ -129,6 +148,7 @@ docker compose -f docker-compose.minio-test.yml stop postgres-pgvector-test
 | 2026-09-04 | 실제 LM Studio 임베딩 단일 질의 비교 통과 |
 | 2026-09-04 | 실제 LM Studio 임베딩 다중 질의 비교 통과 |
 | 2026-09-04 | 전체 회귀 `386 passed, 14 skipped` |
+| 2026-09-05 | migration·증분 재색인·canary readiness audit 통과 |
 
 ## 경고 및 제한
 
