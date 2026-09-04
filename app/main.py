@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 from app.constants import RECOMMENDED_GENERATION_MODELS, recommended_generation_model
 from app.version import APP_VERSION
 from app.application.project_facade import ProjectValidationError, dashboard as project_dashboard_facade, detail as project_detail_facade, save_detail as save_project_detail_facade, workflow as project_workflow_facade, workflow_config as project_workflow_config_facade
+from app.application.workflow_jobs import GenerationJobAdapter
+from app.application.job_registry import cancel_job
 
 from app.core import (
     DB_PATH,
@@ -1154,6 +1156,8 @@ def create_outline(data: SermonOutlineRequest, request: Request = None):
     time_plan = sermon_time_plan(data.minutes, reading_cpm)
     client = LMStudioClient()
     client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
+    job = GenerationJobAdapter.from_request(request, "outline")
+    job.start()
     try:
         model, _ = _select_generation_model(client, data.model, data.minutes)
         prompt_study = compact_outline_study(study)
@@ -1176,6 +1180,7 @@ def create_outline(data: SermonOutlineRequest, request: Request = None):
         raise HTTPException(503, str(exc)) from exc
     finally:
         client.end_generation()
+        job.complete("아웃라인 생성 요청이 종료되었습니다.")
     return {
         "outline": outline, "time_plan": time_plan, "model": model,
         "reference": normalized_reference, "study_counts": study.get("counts", {}),
@@ -1451,6 +1456,8 @@ def generate_sermon(data: SermonRequest, request: Request = None):
     data = data.model_copy(update={"main_reference": _request_reference(data.main_reference)})
     client = LMStudioClient()
     client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
+    job = GenerationJobAdapter.from_request(request, "sermon")
+    job.start()
     reading_cpm = data.reading_cpm or get_reading_cpm()
     if data.main_reference:
         packet = _collect_research_packet(data, client)
@@ -1519,6 +1526,7 @@ def generate_sermon(data: SermonRequest, request: Request = None):
         raise HTTPException(503, str(exc)) from exc
     finally:
         client.end_generation()
+        job.complete("설교 생성 요청이 종료되었습니다.")
     result["research_packet"] = packet
     return result
 
@@ -1528,7 +1536,10 @@ def cancel_sermon_generation(request: Request):
     generation_id = request.headers.get("X-Generation-Id", "").strip()
     if not generation_id:
         raise HTTPException(400, "취소할 생성 작업 ID가 없습니다.")
-    return {"ok": cancel_generation(generation_id), "generation_id": generation_id}
+    cancelled = cancel_generation(generation_id)
+    if cancelled:
+        cancel_job(generation_id)
+    return {"ok": cancelled, "generation_id": generation_id}
 
 
 @app.post("/api/sermons/save")
