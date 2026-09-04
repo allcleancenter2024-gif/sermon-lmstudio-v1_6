@@ -13,6 +13,8 @@
 
 이번 작업지시서에서는 V60으로 버전을 점프하지 않는다. 현재 제품의 버전 흐름과 호환성을 유지하면서 기능 단위로 변경한다. PostgreSQL·pgvector·MinIO의 즉시 전환도 수행하지 않는다.
 
+> **운영 상태 갱신 — 2026-09-05:** 이 문서의 Phase 0 이후 별도 승인된 pgvector 운영 전환이 완료되었습니다. 현재 RAG 주 경로는 `postgres_pgvector`이고 SQLite fallback은 유지됩니다. 이 작업지시서의 “즉시 전환 금지”는 이후 구조 개선 Phase에서 추가 저장소 전환을 금지한다는 뜻이며, 완료된 pgvector 전환을 되돌리라는 의미가 아닙니다.
+
 ## 2. 문서 분석 결론
 
 원문은 세 가지 구조를 제시한다.
@@ -70,8 +72,8 @@ app/
 | 영역 | 현재 상태 | 즉시 변경 시 위험 | 권장 해결 |
 |---|---|---|---|
 | 버전 | 여러 실행·UI·검증 지점이 V40.9.10을 사용 | 일부 파일만 변경하면 launcher와 UI 버전 불일치 | 중앙 버전 공급원과 계약 테스트를 먼저 정리 |
-| DB | SQLite가 기본이고 PostgreSQL Adapter가 선택형 | 즉시 전환 시 데이터·백업·마이그레이션 위험 | SQLite 유지, Adapter 계약 검증 후 단계 전환 |
-| RAG | Semantic, FTS5, Hybrid/RRF, Doctrine RAG 공존 | 인덱스·임베딩·검색 결과 이중화 | 기존 RAG를 기본값으로 유지하고 동일 질문 회귀 비교 |
+| DB | SQLite 원본·fallback과 PostgreSQL·pgvector 운영 RAG가 공존 | 추가 전환 시 데이터·백업·마이그레이션 위험 | SQLite 보존, pgvector 계약·canary·rollback을 유지하고 추가 저장소는 별도 검증 |
+| RAG | pgvector Semantic 주 경로, SQLite Semantic/FTS5/Hybrid fallback, Doctrine RAG 공존 | 인덱스·임베딩·검색 결과 이중화 | SQLite fallback·기존 FTS5/Hybrid를 보존하고 동일 질문 회귀 비교 |
 | 모듈 경로 | `app.core`, `app.main`, `app.repositories.*` 사용 | 일괄 이동 시 기존 테스트와 import 파괴 | 호환 Facade와 점진적 내부 추출 |
 | DB 엔터티 | sermon, project, review, audit, doctrine 테이블이 이미 존재 | 문서 엔터티를 중복 생성할 위험 | 기존 Repository·테이블 매핑 후 필요한 필드만 migration |
 | Provider | LM Studio localhost 경계가 보호됨 | 원격 주소 허용 또는 장애 전파 위험 | `127.0.0.1` 기본값과 기능 단위 오류 유지 |
@@ -151,7 +153,7 @@ Phase 0 판정: 통과
 1. SQLite Semantic/FTS5/Hybrid 결과를 기준선으로 고정한다.
 2. 동일 질문 세트로 새 검색 결과를 비교한다.
 3. 기존 결과보다 명백히 나빠지면 새 방식을 기본값으로 전환하지 않는다.
-4. PostgreSQL·pgvector·MinIO는 별도 Adapter와 통합 테스트를 통과한 뒤 선택적으로 활성화한다.
+4. PostgreSQL·pgvector는 별도 Adapter·통합 테스트·전체 corpus canary를 통과해 활성화되었으며 SQLite fallback을 유지한다. MinIO 또는 다른 저장소는 별도 검증 전 활성화하지 않는다.
 
 ### Phase 6 — 비동기 작업과 운영 고도화
 
@@ -209,5 +211,5 @@ Phase 0은 통과했지만 구현은 아직 시작하지 않았다. 다음 권�
 ## 경고
 
 - 이 문서는 구조 개선 작업지시서이며 교리적 판단이나 성경 본문 해석을 대신하지 않는다.
-- 문서의 PostgreSQL·pgvector·MinIO 목표는 장기 선택지이지 현재 즉시 전환 명령이 아니다.
+- MinIO 등 추가 저장소 목표는 장기 선택지이며, 별도 승인·검증 전 즉시 전환하지 않는다. pgvector 운영 전환은 2026-09-05에 별도 승인 절차로 완료되었다.
 - 외부 통합 Skip 테스트는 실제 인프라가 준비되기 전까지 전체 성공으로 간주하지 않는다.

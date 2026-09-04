@@ -2,18 +2,18 @@
 
 ## 문서 목적
 
-이 문서는 현재 SQLite 기반 RAG를 보존하면서 PostgreSQL·pgvector를 격리 검증하고, 검색 결과가 기준선을 만족할 때만 다음 단계로 넘어가기 위한 운영 절차입니다.
+이 문서는 SQLite 기반 RAG를 보존하면서 PostgreSQL·pgvector를 격리 검증하고, 검색 결과가 기준선을 만족한 경우에만 운영 전환·운영·복구를 수행하기 위한 절차입니다.
 
 현재 운영 기본값은 다음과 같습니다.
 
 | 항목 | 현재 정책 |
 |---|---|
-| 운영 RAG | SQLite Semantic Search + FTS5/Hybrid |
-| pgvector | 격리된 테스트 환경에서만 사용 |
+| 운영 RAG | PostgreSQL·pgvector Semantic Search, SQLite FTS5/Hybrid 및 Semantic Search fallback 유지 |
+| pgvector | 별도 운영 DB `127.0.0.1:15434`에서 활성화 |
 | 임베딩 모델 | `text-embedding-nomic-embed-text-v1.5` |
 | 임베딩 차원 | 768 |
-| 운영 DB 전환 | 승인 전까지 금지 |
-| 운영 데이터 재색인 | 승인 전까지 금지 |
+| SQLite 원본 | 읽기 전용 기준선 및 장애 fallback으로 보존 |
+| 운영 전환 | 2026-09-05 승인·검증 후 활성화 |
 
 ## 단계별 전환 게이트
 
@@ -50,9 +50,9 @@ SELECT extname FROM pg_extension WHERE extname = 'vector';
 
 다중 질의에서 하나라도 ID 순서 또는 점수 기준을 만족하지 못하면 pgvector 전환을 차단합니다.
 
-### Gate 3: 운영 전환 승인
+### Gate 3: 운영 전환 승인 또는 운영 재검증
 
-Gate 0~2를 통과해도 운영 전환은 자동으로 수행하지 않습니다. 다음 자료를 별도로 확인해야 합니다.
+신규 전환은 Gate 0~2를 통과해도 자동으로 수행하지 않습니다. 다음 자료를 별도로 확인해야 합니다.
 
 - 전체 데이터 재색인 예상 시간
 - 임베딩 모델·차원·버전 일치 여부
@@ -61,9 +61,9 @@ Gate 0~2를 통과해도 운영 전환은 자동으로 수행하지 않습니다
 - 장애 시 SQLite 복귀 확인
 - 관리자 승인 기록
 
-### Gate 4: Canary readiness audit
+### Gate 4: 전체 corpus canary readiness audit
 
-운영 전환 전에는 격리 DB에서 readiness audit를 실행합니다. Audit는 다음을 모두 통과해야 `PASS`를 반환합니다.
+운영 전환 전에는 격리 DB와 운영 대상 DB에서 readiness audit를 실행합니다. 운영 대상 audit는 SQLite 전체 corpus를 순위 기준선으로 사용합니다. Audit는 다음을 모두 통과해야 `PASS`를 반환합니다.
 
 - `rag_pgvector_v1` migration ID 기록 존재
 - canary SQLite 원본 건수와 pgvector model별 적재 건수 일치
@@ -86,7 +86,7 @@ docker compose --env-file config\pgvector-prod.env -f docker-compose.pgvector-pr
 
 복사한 `config\pgvector-prod.env`에만 고유한 `POSTGRES_RAG_PROD_PASSWORD`를 입력합니다.
 
-운영 service 생성만으로 RAG backend가 바뀌지 않습니다. migration, 증분 적재, readiness, canary가 모두 통과할 때까지 `RAG_BACKEND=sqlite`와 `RAG_PGVECTOR_CAPABILITY_VERIFIED=false`를 유지합니다.
+운영 service 생성만으로 RAG backend가 바뀌지 않습니다. migration, 전체 적재, readiness, canary, 백업 및 SQLite fallback 검증이 모두 통과한 경우에만 `RAG_BACKEND=postgres_pgvector`와 `RAG_PGVECTOR_CAPABILITY_VERIFIED=true`로 변경합니다. `RAG_PGVECTOR_FALLBACK_TO_SQLITE=true`는 항상 유지합니다.
 
 테스트 서비스는 다음 Compose 파일에서 별도 관리합니다.
 
@@ -141,7 +141,7 @@ docker compose -f docker-compose.minio-test.yml stop postgres-pgvector-test
 4. 기존 SQLite RAG를 계속 사용합니다.
 5. 운영 `RAG_BACKEND` 또는 운영 DB 연결정보는 변경하지 않습니다.
 
-### 운영 전환 후 rollback 조건
+### 운영 전환 후 rollback 조건과 절차
 
 다음 중 하나라도 발생하면 운영 전환을 즉시 중단하고 SQLite 기준선으로 복귀합니다.
 
@@ -152,7 +152,14 @@ docker compose -f docker-compose.minio-test.yml stop postgres-pgvector-test
 - 설교 근거 본문 누락 또는 출처 metadata 손실
 - DB 또는 MinIO 원본 복구 검증 실패
 
-운영 복귀는 환경변수와 연결 경로를 SQLite 기본값으로 되돌린 뒤, 사전 백업으로 데이터 무결성을 확인하는 방식으로 수행합니다. 기존 SQLite 테이블은 삭제하거나 덮어쓰지 않습니다.
+운영 복귀는 다음 순서로 수행합니다.
+
+1. `config/pgvector-prod.env`에서 `RAG_BACKEND=sqlite`, `RAG_PGVECTOR_CAPABILITY_VERIFIED=false`로 변경합니다.
+2. `docker compose -f docker-compose.yml up -d --build sermon-lmstudio`로 애플리케이션만 재시작합니다.
+3. `/api/runtime` health와 SQLite Semantic Search를 확인합니다.
+4. PostgreSQL 덤프는 별도 보존하고, SQLite DB·원본 테이블·pgvector 컨테이너를 삭제하거나 덮어쓰지 않습니다.
+
+pgvector DB 자체의 복구가 필요할 때만 사전 검증된 `pg_restore` 덤프를 **별도 복구 DB**에 먼저 복원하여 검증한 뒤 운영 복구 여부를 결정합니다.
 
 ## 현재 검증 기록
 
@@ -163,12 +170,16 @@ docker compose -f docker-compose.minio-test.yml stop postgres-pgvector-test
 | 2026-09-04 | 실제 LM Studio 임베딩 다중 질의 비교 통과 |
 | 2026-09-04 | 전체 회귀 `386 passed, 14 skipped` |
 | 2026-09-05 | migration·증분 재색인·canary readiness audit 통과 |
+| 2026-09-05 | SQLite 31,098건 → 운영 pgvector 31,098건 전체 적재 완료 |
+| 2026-09-05 | 전체 corpus canary 통과: 4개 질의 상위 10개 순위 일치, 최대 42.161ms |
+| 2026-09-05 | PostgreSQL 백업·덤프 목록 검증 및 SQLite fallback 4.286초 통과 |
+| 2026-09-05 | `postgres_pgvector` 주 경로 활성화, 실행 컨테이너 health 확인 |
 
 ## 경고 및 제한
 
-- 이 문서는 pgvector 운영 전환을 승인하는 문서가 아닙니다.
-- 현재 테스트는 256건 샘플 기준이며 전체 31,098건 재색인을 의미하지 않습니다.
-- 현재 애플리케이션의 실제 RAG 검색 경로는 SQLite입니다.
+- 이 문서는 2026-09-05에 완료된 운영 전환과 이후 운영·복구 절차를 함께 기록합니다. 신규 환경 전환은 여전히 별도 승인이 필요합니다.
+- 256건 표본은 빠른 사전 점검용이며, 운영 전환 기록은 SQLite 전체 31,098건을 순위 기준선으로 검증했습니다.
+- 현재 애플리케이션의 실제 RAG 검색 주 경로는 PostgreSQL·pgvector이며 SQLite fallback은 활성 상태입니다.
 - 비밀번호·Secret Key를 문서, Git, 로그에 기록하지 않습니다.
 - 운영 DB와 운영 MinIO에 테스트 플래그를 사용하지 않습니다.
 - 테스트용 Docker 볼륨을 운영 데이터 저장소로 사용하지 않습니다.
