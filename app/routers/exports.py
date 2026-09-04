@@ -6,15 +6,14 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from app.paths import EXPORTS_DIR
-from app.core import (DB_PATH, estimate_minutes, get_project_meta, get_reading_cpm, get_generation_audit, list_sermons, sermon_review_state, sermon_versions, save_sermon)
-from app.exporters import dashboard_html, write_docx, write_pdf, write_final_package
-from app.formatting.adapters import sermon_document
-from app.formatting.format_router import page_format_v2_enabled, render, render_to_path
-from app.formatting.registry import select_output
-from app.formatting.rollout import v2_is_selected
-from app.formatting.telemetry import record_event
-from app.formatting.fallback import with_legacy_fallback
-from app.exporters_grounding import build_grounding_report_data, render_grounding_html, render_grounding_markdown, safe_report_stem
+from app.application.exports_facade import (
+    DB_PATH, build_grounding_report_data, dashboard_html, estimate_minutes,
+    get_generation_audit, get_project_meta, get_reading_cpm, list_sermons,
+    page_format_v2_enabled, record_event, render, render_grounding_html,
+    render_grounding_markdown, render_to_path, safe_report_stem, save_sermon,
+    select_output, sermon_document, sermon_review_state, sermon_versions,
+    v2_is_selected, with_legacy_fallback, write_docx, write_final_package, write_pdf,
+)
 
 router=APIRouter(); EXPORTS=EXPORTS_DIR
 def _page_document(data:dict):
