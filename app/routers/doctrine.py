@@ -1,9 +1,9 @@
 from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from app.core import DB_PATH
 from app.auth import is_admin, session_user
 from app.application import doctrine_facade
+from app.application.doctrine_facade import DB_PATH
 from app.paths import USER_ROOT
 
 router=APIRouter()
