@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from app import main
+from app.version import APP_VERSION
 from app.core import (
     add_original_note, db_stats, import_original_lexicon, import_original_notes,
     original_language_coverage, original_notes,
@@ -12,7 +13,7 @@ from app.importers import classify_original_language_source, convert_lexicon_sou
 
 class V40OriginalCoverageTests(unittest.TestCase):
     def test_current_runtime_and_workflow_version(self):
-        self.assertEqual(main.APP_VERSION, "40.9.10")
+        self.assertEqual(main.APP_VERSION, APP_VERSION)
         self.assertEqual(main.workflow_config()["version"], 40)
 
     def test_coverage_reports_missing_verse_in_range(self):

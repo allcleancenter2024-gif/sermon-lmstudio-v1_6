@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 
 from app import main
+from app.version import APP_VERSION
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +12,7 @@ class V37FirstRunWizardTests(unittest.TestCase):
     def test_runtime_version_and_default_duration(self):
         config = main.workflow_config()
         self.assertEqual(config["version"], 40)
-        self.assertEqual(config["app_version"], "40.9.10")
+        self.assertEqual(config["app_version"], APP_VERSION)
         self.assertEqual(config["default_minutes"], 15)
         self.assertEqual(config["minutes"], [15, 20, 25, 30])
 

@@ -590,7 +590,7 @@ def home(request: Request):
         login_path = ROOT / "templates" / "login.html"
         if login_path.is_file():
             return login_path.read_text(encoding="utf-8")
-    html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+    html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8").replace("__APP_VERSION__", APP_VERSION)
     enabled = os.getenv("GROUNDING_DASHBOARD_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
     report_enabled = os.getenv("GROUNDING_REPORT_EXPORT_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
     return html.replace("</head>", f"<script>window.GROUNDING_DASHBOARD_ENABLED={str(enabled).lower()};window.GROUNDING_REPORT_EXPORT_ENABLED={str(report_enabled).lower()};</script></head>")

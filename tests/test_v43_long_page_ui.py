@@ -2,6 +2,8 @@ import re
 import unittest
 from pathlib import Path
 
+from app.version import APP_VERSION
+
 
 class LongPageUiTests(unittest.TestCase):
     @classmethod
@@ -63,9 +65,10 @@ class LongPageUiTests(unittest.TestCase):
         self.assertIn("localStorage.getItem('sermonSideMenuCollapsed')", self.js)
 
     def test_ui_assets_are_versioned_to_avoid_stale_browser_cache(self):
-        self.assertIn('/static/style.css?v=40.9.10', self.html)
-        self.assertIn('/static/v2.css?v=40.9.10', self.html)
-        self.assertIn('/static/app.js?v=40.9.10', self.html)
+        self.assertIn('/static/style.css?v=__APP_VERSION__', self.html)
+        self.assertIn('/static/v2.css?v=__APP_VERSION__', self.html)
+        self.assertIn('/static/app.js?v=__APP_VERSION__', self.html)
+        self.assertRegex(APP_VERSION, r"^\d+\.\d+\.\d+$")
 
 
 if __name__ == "__main__":

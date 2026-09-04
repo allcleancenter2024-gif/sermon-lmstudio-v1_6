@@ -46,7 +46,7 @@ set "VERIFY_EXIT=%ERRORLEVEL%"
 if "%VERIFY_EXIT%"=="6" (
   echo.
   echo [ERROR] This folder contains a different application version.
-  echo Extract SermonLMStudio-V40.9.2 into a NEW empty folder.
+  echo Extract the V%EXPECTED_VERSION% package into a NEW empty folder.
   pause
   exit /b 6
 )

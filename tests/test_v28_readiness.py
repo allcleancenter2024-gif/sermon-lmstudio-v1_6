@@ -4,6 +4,7 @@ from pathlib import Path
 
 import launcher
 from app import main
+from app.version import APP_VERSION
 
 
 class _ReadyClient:
@@ -20,7 +21,7 @@ class V28ReadinessTests(unittest.TestCase):
     def test_workflow_config_version_and_15_minute_default_match_runtime(self):
         config = main.workflow_config()
         self.assertEqual(config["version"], 40)
-        self.assertEqual(config["app_version"], "40.9.10")
+        self.assertEqual(config["app_version"], APP_VERSION)
         self.assertEqual(config["default_minutes"], 15)
         self.assertIn(15, config["minutes"])
 
