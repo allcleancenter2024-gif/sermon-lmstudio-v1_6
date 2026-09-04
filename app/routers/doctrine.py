@@ -1,12 +1,9 @@
 from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from datetime import datetime, timezone
-import sqlite3
-from app.core import DB_PATH, LMStudioClient, add_doctrine_chunk, rag_stats, recommend_related, register_translation_license, translation_licenses
+from app.core import DB_PATH
 from app.auth import is_admin, session_user
-from app.doctrine_workflow import fetch_indexable_doctrine_chunks, transition_document
-from app.doctrine_rag import build_approved_doctrine_index, search_approved_doctrine
+from app.application import doctrine_facade
 from app.paths import USER_ROOT
 
 router=APIRouter()
@@ -43,26 +40,22 @@ def _require_admin(request: Request) -> str:
 @router.post("/api/doctrine")
 def create_doctrine(data:DoctrineChunkRequest, request: Request):
     _require_admin(request)
-    return {"ok":True,"id":add_doctrine_chunk(data.model_dump())}
+    return {"ok":True,"id":doctrine_facade.create_chunk(data.model_dump())}
 
 @router.get("/api/admin/doctrine/indexable")
 def list_indexable_doctrine(request: Request):
     _require_admin(request)
-    return {"items": fetch_indexable_doctrine_chunks(DB_PATH)}
+    return {"items": doctrine_facade.indexable_chunks(DB_PATH)}
 
 @router.post("/api/admin/doctrine/sources/{source_id}/license-review")
 def review_doctrine_license(source_id: int, data: DoctrineLicenseReviewRequest, request: Request):
     actor = _require_admin(request)
     if data.reviewer.strip() != actor:
         raise HTTPException(403, "로그인 계정과 검토자 계정이 일치해야 합니다.")
-    active = 1 if data.license_status == "VERIFIED" else 0
-    reviewed_at = datetime.now(timezone.utc).isoformat()
-    with sqlite3.connect(DB_PATH) as con:
-        row = con.execute("SELECT id FROM doctrine_sources WHERE id=?", (source_id,)).fetchone()
-        if not row:
-            raise HTTPException(404, "교단 자료원을 찾지 못했습니다.")
-        con.execute("UPDATE doctrine_sources SET license_status=?, active=?, permission_ref=?, license_reviewed_by=?, license_reviewed_at=?, license_review_note=?, updated_at=? WHERE id=?", (data.license_status, active, data.permission_ref.strip(), actor, reviewed_at, data.note.strip(), reviewed_at, source_id))
-    return {"ok": True, "source_id": source_id, "license_status": data.license_status, "active": bool(active), "reviewed_by": actor, "reviewed_at": reviewed_at}
+    try:
+        return doctrine_facade.review_license(source_id, license_status=data.license_status, reviewer=actor, permission_ref=data.permission_ref, note=data.note, db_path=DB_PATH)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 @router.post("/api/admin/doctrine/documents/{document_id}/review")
 def review_doctrine_document(document_id: int, data: DoctrineReviewRequest, request: Request):
@@ -70,7 +63,7 @@ def review_doctrine_document(document_id: int, data: DoctrineReviewRequest, requ
     if data.reviewer.strip() != actor:
         raise HTTPException(403, "로그인 계정과 검토자 계정이 일치해야 합니다.")
     try:
-        return {"ok": True, **transition_document(document_id, "APPROVED", actor, data.comment, DB_PATH)}
+        return {"ok": True, **doctrine_facade.review_document(document_id, actor=actor, comment=data.comment, db_path=DB_PATH)}
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -78,22 +71,22 @@ def review_doctrine_document(document_id: int, data: DoctrineReviewRequest, requ
 def reindex_approved_doctrine(data: DoctrineIndexRequest, request: Request):
     _require_admin(request)
     try:
-        return {"ok": True, **build_approved_doctrine_index(LMStudioClient(), data.model, DB_PATH)}
+        return {"ok": True, **doctrine_facade.reindex(data.model, DB_PATH)}
     except (ConnectionError, RuntimeError, ValueError) as exc:
         raise HTTPException(503, f"승인 교리 색인 실패: {exc}") from exc
 
 @router.post("/api/doctrine/search")
 def search_doctrine_v2(data: DoctrineSearchRequest):
     try:
-        return {"items": search_approved_doctrine(data.query, LMStudioClient(), data.model, data.denomination_code, DB_PATH, data.limit, data.include_common)}
+        return {"items": doctrine_facade.search(data.query, data.model, data.denomination_code, data.limit, data.include_common, DB_PATH)}
     except (ConnectionError, RuntimeError, ValueError) as exc:
         raise HTTPException(503, f"교단 교리 검색 실패: {exc}") from exc
 @router.post("/api/translation-licenses")
-def create_translation_license(data:TranslationLicenseRequest): register_translation_license(data.model_dump()); return {"ok":True}
+def create_translation_license(data:TranslationLicenseRequest): doctrine_facade.create_license(data.model_dump()); return {"ok":True}
 @router.get("/api/translation-licenses")
-def list_translation_licenses(): return {"items":translation_licenses()}
+def list_translation_licenses(): return {"items":doctrine_facade.list_licenses()}
 @router.get("/api/recommend")
 def recommend(reference:str,model:str,limit:int=8):
-    if model not in rag_stats()["models"]: raise HTTPException(400,"선택한 임베딩 모델의 RAG 인덱스를 먼저 만드세요.")
-    try: return {"reference":reference,"model":model,"items":recommend_related(reference,LMStudioClient(),model,min(max(limit,1),20))}
+    if model not in doctrine_facade.available_models(): raise HTTPException(400,"선택한 임베딩 모델의 RAG 인덱스를 먼저 만드세요.")
+    try: return {"reference":reference,"model":model,"items":doctrine_facade.recommend(reference,model,limit)}
     except (ConnectionError,RuntimeError,ValueError) as exc: raise HTTPException(503,f"관련구절 추천 실패: {exc}") from exc
