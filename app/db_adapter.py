@@ -92,10 +92,13 @@ class SQLiteAdapter:
 class PostgresAdapter:
     backend = "postgres"
 
-    def __init__(self, database_url: str):
+    def __init__(self, database_url: str, *, connect_timeout_seconds: int | None = None):
         if not database_url:
             raise DatabaseConfigurationError("PostgreSQL 연결 문자열이 필요합니다.")
+        if connect_timeout_seconds is not None and connect_timeout_seconds < 1:
+            raise DatabaseConfigurationError("PostgreSQL 연결 시간 제한은 1초 이상이어야 합니다.")
         self.database_url = database_url
+        self.connect_timeout_seconds = connect_timeout_seconds
 
     @contextmanager
     def transaction(self) -> Iterator[Any]:
@@ -104,7 +107,10 @@ class PostgresAdapter:
         except ImportError as exc:  # pragma: no cover - environment dependent
             raise DatabaseConfigurationError("PostgreSQL 드라이버 psycopg가 설치되지 않았습니다.") from exc
         from psycopg.rows import dict_row
-        with psycopg.connect(self.database_url, row_factory=dict_row) as con:
+        connect_kwargs = {"row_factory": dict_row}
+        if self.connect_timeout_seconds is not None:
+            connect_kwargs["connect_timeout"] = self.connect_timeout_seconds
+        with psycopg.connect(self.database_url, **connect_kwargs) as con:
             yield con
 
 

@@ -32,6 +32,19 @@ def load_sqlite_canary_rows(db_path: Path, model: str, *, limit: int = 256) -> l
         )]
 
 
+def load_sqlite_rag_rows(db_path: Path, model: str) -> list[dict]:
+    """Read the full SQLite RAG corpus for an apples-to-apples rank baseline."""
+    with sqlite3.connect(f"file:{Path(db_path).as_posix()}?mode=ro", uri=True) as connection:
+        connection.row_factory = sqlite3.Row
+        return [dict(row) for row in connection.execute(
+            """SELECT p.id, p.translation, p.language, p.reference, p.text, p.license_note,
+                      e.vector_json, e.vector_blob, e.norm
+               FROM rag_embeddings e JOIN passages p ON p.id=e.passage_id
+               WHERE e.model=? ORDER BY p.id""",
+            (model,),
+        )]
+
+
 def audit_pgvector_canary(
     repository: PgVectorRagRepository,
     source_rows: list[dict],
@@ -40,10 +53,10 @@ def audit_pgvector_canary(
     *,
     top_k: int = 10,
     max_latency_ms: float = 5_000,
+    expected_embedding_count: int | None = None,
+    baseline_rows: list[dict] | None = None,
 ) -> dict:
     """Return PASS only when migration, count, rank, and latency gates all pass."""
-    if not isinstance(repository, PgVectorRagRepository):
-        raise PgVectorConfigurationError("canary audit에는 PgVectorRagRepository가 필요합니다.")
     if not source_rows:
         raise ValueError("canary 원본 행이 필요합니다.")
     if not query_vectors:
@@ -52,6 +65,13 @@ def audit_pgvector_canary(
         raise ValueError("top_k는 1부터 100 사이여야 합니다.")
     if not 0 < max_latency_ms <= MAX_LATENCY_MS:
         raise ValueError(f"max_latency_ms는 0보다 크고 {MAX_LATENCY_MS} 이하여야 합니다.")
+    if expected_embedding_count is not None and expected_embedding_count < len(source_rows):
+        raise ValueError("expected_embedding_count는 canary 원본 건수보다 작을 수 없습니다.")
+    rank_baseline_rows = baseline_rows if baseline_rows is not None else source_rows
+    if not rank_baseline_rows:
+        raise ValueError("검색 순위 기준 SQLite 행이 필요합니다.")
+    if not isinstance(repository, PgVectorRagRepository):
+        raise PgVectorConfigurationError("canary audit에는 PgVectorRagRepository가 필요합니다.")
 
     with repository.adapter.transaction() as connection:
         migration_table = connection.execute(
@@ -70,25 +90,25 @@ def audit_pgvector_canary(
 
     checks = {
         "migration_recorded": bool(migration_row),
-        "embedding_count_matches": int(count_row["count"]) == len(source_rows),
+        "embedding_count_matches": int(count_row["count"]) == (expected_embedding_count or len(source_rows)),
     }
     comparisons = []
     for query_vector in query_vectors:
-        baseline = []
-        for row in source_rows:
+        ranked_baseline = []
+        for row in rank_baseline_rows:
             score = score_semantic_vector(
                 query_vector,
                 restore_rag_vector(row["vector_blob"], row["vector_json"]),
                 row["norm"],
             )
-            baseline.append({"id": row["id"], "semantic_score": score})
-        baseline.sort(key=lambda row: row["semantic_score"], reverse=True)
+            ranked_baseline.append({"id": row["id"], "semantic_score": score})
+        ranked_baseline.sort(key=lambda row: row["semantic_score"], reverse=True)
         started = perf_counter()
         candidate = repository.search(query_vector, model, limit=top_k)
         latency_ms = (perf_counter() - started) * 1_000
-        comparison = compare_ranked_ids(baseline, candidate, limit=top_k)
+        comparison = compare_ranked_ids(ranked_baseline, candidate, limit=top_k)
         comparison["latency_ms"] = round(latency_ms, 3)
-        comparison["rank_matches"] = not comparison["order_changed"] and comparison["overlap_count"] == min(top_k, len(baseline))
+        comparison["rank_matches"] = not comparison["order_changed"] and comparison["overlap_count"] == min(top_k, len(ranked_baseline))
         comparison["latency_passes"] = latency_ms <= max_latency_ms
         comparisons.append(comparison)
 
@@ -99,6 +119,8 @@ def audit_pgvector_canary(
         "checks": checks,
         "model": model,
         "source_count": len(source_rows),
+        "baseline_count": len(rank_baseline_rows),
+        "expected_embedding_count": expected_embedding_count or len(source_rows),
         "pgvector_count": int(count_row["count"]),
         "top_k": top_k,
         "max_latency_ms": max_latency_ms,

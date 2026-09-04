@@ -11,6 +11,9 @@ services:
     env_file:
       - path: .env
         required: false
+      # Optional, Git-ignored local pgvector production credentials and flags.
+      - path: config/pgvector-prod.env
+        required: false
     environment:
       SERMON_USER_ROOT: /app
       SERMON_LMSTUDIO_URL: ${SERMON_LMSTUDIO_URL:-http://127.0.0.1:12345/v1}

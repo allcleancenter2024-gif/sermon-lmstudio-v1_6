@@ -10,11 +10,14 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 import math
 import os
+from urllib.parse import quote
 
 from app.db_adapter import PostgresAdapter
 
 
 MODEL_DIMENSION = 768
+HNSW_EF_SEARCH = 200
+PGVECTOR_CONNECT_TIMEOUT_SECONDS = 1
 
 
 class PgVectorConfigurationError(ValueError):
@@ -92,6 +95,9 @@ class PgVectorRagRepository:
             raise PgVectorConfigurationError("검색 limit은 1부터 100 사이여야 합니다.")
         literal = vector_literal(query_vector)
         with self.adapter.transaction() as connection:
+            # HNSW is approximate by design.  A wider bounded search keeps the
+            # live path stable for the small (<=100) result windows we expose.
+            connection.execute("SELECT set_config('hnsw.ef_search', %s, true)", (str(HNSW_EF_SEARCH),))
             rows = connection.execute(
                 """SELECT p.id, p.translation, p.language, p.reference, p.text, p.license_note,
                           1 - (e.embedding <=> %s::vector) AS semantic_score
@@ -111,5 +117,19 @@ def create_pgvector_repository(environ: dict[str, str] | None = None) -> PgVecto
     env = os.environ if environ is None else environ
     database_url = env.get("RAG_PGVECTOR_DATABASE_URL", "").strip()
     if not database_url:
-        raise PgVectorConfigurationError("pgvector RAG에는 RAG_PGVECTOR_DATABASE_URL이 필요합니다.")
-    return PgVectorRagRepository(PostgresAdapter(database_url))
+        database_name = env.get("POSTGRES_RAG_PROD_DB", "").strip()
+        username = env.get("POSTGRES_RAG_PROD_USER", "").strip()
+        password = env.get("POSTGRES_RAG_PROD_PASSWORD", "")
+        port = env.get("POSTGRES_RAG_PROD_PORT", "15434").strip()
+        if all((database_name, username, password, port)):
+            database_url = (
+                f"postgresql://{quote(username, safe='')}:{quote(password, safe='')}"
+                f"@127.0.0.1:{quote(port, safe='')}/{quote(database_name, safe='')}"
+            )
+    if not database_url:
+        raise PgVectorConfigurationError(
+            "pgvector RAG에는 RAG_PGVECTOR_DATABASE_URL 또는 전용 POSTGRES_RAG_PROD 연결 정보가 필요합니다."
+        )
+    return PgVectorRagRepository(
+        PostgresAdapter(database_url, connect_timeout_seconds=PGVECTOR_CONNECT_TIMEOUT_SECONDS)
+    )

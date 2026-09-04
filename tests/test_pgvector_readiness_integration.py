@@ -33,7 +33,7 @@ def test_canary_readiness_requires_counts_and_matching_ranks():
     reindex_sqlite_batch(repository, DB_PATH, MODEL, batch_size=16)
     rows = load_sqlite_canary_rows(DB_PATH, MODEL, limit=16)
     queries = [restore_rag_vector(rows[index]["vector_blob"], rows[index]["vector_json"]) for index in (0, 8)]
-    result = audit_pgvector_canary(repository, rows, MODEL, queries, top_k=5, max_latency_ms=1_000)
+    result = audit_pgvector_canary(repository, rows, MODEL, queries, top_k=5, max_latency_ms=1_000, expected_embedding_count=16)
     assert result["status"] == "PASS"
 
     with repository.adapter.transaction() as connection:
