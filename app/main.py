@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from app.constants import RECOMMENDED_GENERATION_MODELS, recommended_generation_model
 from app.version import APP_VERSION
+from app.application.project_facade import ProjectValidationError, dashboard as project_dashboard_facade, detail as project_detail_facade, save_detail as save_project_detail_facade, workflow as project_workflow_facade, workflow_config as project_workflow_config_facade
 
 from app.core import (
     DB_PATH,
@@ -837,44 +838,34 @@ def calibrate_speed(data: ReadingCalibrationRequest):
 
 # Compatibility implementations retained below; routes are registered by projects_router.
 def projects_dashboard():
-    return project_dashboard()
+    return project_dashboard_facade()
 
 
 def workflow_config():
-    reading_cpm = get_reading_cpm()
-    return {
-        "version": 40,
-        "app_version": APP_VERSION,
-        "minutes": list(SUPPORTED_SERMON_MINUTES),
-        "default_minutes": DEFAULT_SERMON_MINUTES,
-        "reading_cpm": reading_cpm,
-        "target_characters": {str(m): m * reading_cpm for m in SUPPORTED_SERMON_MINUTES},
-        "recommended_generation_models": {str(minutes): list(models) for minutes, models in RECOMMENDED_GENERATION_MODELS.items()},
-        "steps": ["brief", "bible", "languages", "draft", "evidence", "review", "final"],
-    }
+    config = project_workflow_config_facade()
+    config["recommended_generation_models"] = {str(minutes): list(models) for minutes, models in RECOMMENDED_GENERATION_MODELS.items()}
+    return config
 
 
 def version_workflow(sermon_id: int, version: int):
     try:
-        return sermon_workflow_status(sermon_id, version)
+        return project_workflow_facade(sermon_id, version)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
 
 
 def project_detail(sermon_id: int):
-    if not any(item["id"] == sermon_id for item in list_sermons()):
-        raise HTTPException(404, "설교 프로젝트를 찾을 수 없습니다.")
-    return get_project_meta(sermon_id)
+    try:
+        return project_detail_facade(sermon_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 def save_project_detail(sermon_id: int, data: ProjectMetaRequest):
-    if data.service_date:
-        try:
-            datetime.strptime(data.service_date, "%Y-%m-%d")
-        except ValueError as exc:
-            raise HTTPException(400, "예배일은 YYYY-MM-DD 형식으로 입력하세요.") from exc
     try:
-        return {"ok": True, **update_project_meta(sermon_id, **data.model_dump())}
+        return save_project_detail_facade(sermon_id, **data.model_dump())
+    except ProjectValidationError as exc:
+        raise HTTPException(400, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
 
