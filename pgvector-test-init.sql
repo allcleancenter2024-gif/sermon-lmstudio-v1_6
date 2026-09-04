@@ -8,3 +8,11 @@ CREATE TABLE IF NOT EXISTS rag_embedding_probe (
 
 CREATE INDEX IF NOT EXISTS ix_rag_embedding_probe_cosine
     ON rag_embedding_probe USING hnsw (embedding vector_cosine_ops);
+
+CREATE TABLE IF NOT EXISTS rag_embedding_comparison (
+    passage_id INTEGER PRIMARY KEY,
+    embedding vector(768) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_rag_embedding_comparison_cosine
+    ON rag_embedding_comparison USING hnsw (embedding vector_cosine_ops);
