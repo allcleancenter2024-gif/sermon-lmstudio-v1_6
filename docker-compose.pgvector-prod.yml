@@ -1,0 +1,24 @@
+# Local production-only pgvector service. Never use the test Compose file or
+# its 15432/15433 ports for live RAG data.
+services:
+  postgres-pgvector-prod:
+    image: pgvector/pgvector:pg16
+    container_name: sermon-postgres-pgvector-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_RAG_PROD_DB:-sermon_rag_prod}
+      POSTGRES_USER: ${POSTGRES_RAG_PROD_USER:-sermon_rag_app}
+      POSTGRES_PASSWORD: ${POSTGRES_RAG_PROD_PASSWORD:?POSTGRES_RAG_PROD_PASSWORD must be set in an untracked env file}
+    ports:
+      - "127.0.0.1:${POSTGRES_RAG_PROD_PORT:-15434}:5432"
+    volumes:
+      - sermon_postgres_pgvector_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sermon_postgres_pgvector_prod_data:
+    name: sermon-postgres-pgvector-prod-data

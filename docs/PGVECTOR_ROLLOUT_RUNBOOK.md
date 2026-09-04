@@ -74,6 +74,20 @@ Gate 0~2를 통과해도 운영 전환은 자동으로 수행하지 않습니다
 
 ## 검증 실행
 
+### 운영 전용 service 준비
+
+테스트 DB `127.0.0.1:15433`은 운영에 사용하지 않습니다. 운영 DB는 별도 Compose와 `127.0.0.1:15434`를 사용합니다.
+
+```powershell
+Copy-Item config\pgvector-prod.env.example config\pgvector-prod.env
+docker compose --env-file config\pgvector-prod.env -f docker-compose.pgvector-prod.yml up -d
+docker compose --env-file config\pgvector-prod.env -f docker-compose.pgvector-prod.yml ps
+```
+
+복사한 `config\pgvector-prod.env`에만 고유한 `POSTGRES_RAG_PROD_PASSWORD`를 입력합니다.
+
+운영 service 생성만으로 RAG backend가 바뀌지 않습니다. migration, 증분 적재, readiness, canary가 모두 통과할 때까지 `RAG_BACKEND=sqlite`와 `RAG_PGVECTOR_CAPABILITY_VERIFIED=false`를 유지합니다.
+
 테스트 서비스는 다음 Compose 파일에서 별도 관리합니다.
 
 ```powershell
@@ -158,3 +172,4 @@ docker compose -f docker-compose.minio-test.yml stop postgres-pgvector-test
 - 비밀번호·Secret Key를 문서, Git, 로그에 기록하지 않습니다.
 - 운영 DB와 운영 MinIO에 테스트 플래그를 사용하지 않습니다.
 - 테스트용 Docker 볼륨을 운영 데이터 저장소로 사용하지 않습니다.
+- `config/pgvector-prod.env`는 Git에 추가하지 않으며, 실제 비밀번호를 채팅·문서·로그에 기록하지 않습니다.
