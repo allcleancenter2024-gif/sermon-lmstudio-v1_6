@@ -18,6 +18,25 @@ services:
       timeout: 5s
       retries: 12
 
+  postgres-pgvector-test:
+    image: pgvector/pgvector:pg16
+    container_name: sermon-postgres-pgvector-test
+    restart: "no"
+    environment:
+      POSTGRES_DB: sermon_pgvector_test
+      POSTGRES_USER: sermon_user
+      POSTGRES_PASSWORD: sermon_pgvector_test_password
+    ports:
+      - "127.0.0.1:15433:5432"
+    volumes:
+      - sermon_postgres_pgvector_test_data:/var/lib/postgresql/data
+      - ./pgvector-test-init.sql:/docker-entrypoint-initdb.d/001-rag-probe.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sermon_user -d sermon_pgvector_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
   minio-test:
     image: minio/minio:latest
     container_name: sermon-minio-test
@@ -60,3 +79,5 @@ volumes:
     name: sermon-minio-test-data
   sermon_postgres_test_data:
     name: sermon-postgres-test-data
+  sermon_postgres_pgvector_test_data:
+    name: sermon-postgres-pgvector-test-data
