@@ -95,7 +95,7 @@ from app.services.original_language_dashboard import original_language_dashboard
 from app.auth import is_admin, session_user, user_count
 from app.doctrine_workflow import fetch_indexable_doctrine_chunks, transition_document
 from app.doctrine_rag import search_approved_doctrine
-from app.references import expand_reference, normalize_reference, parse_reference, primary_original_language, validate_primary_original_language
+from app.references import expand_reference, normalize_reference, normalize_user_reference, parse_reference, primary_original_language, validate_primary_original_language
 from app.notebooklm import (
     create_pack,
     drive_status,
@@ -428,8 +428,17 @@ def _select_generation_model(client: LMStudioClient, requested: str = "", minute
     raise RuntimeError("LM Studio에서 사용할 수 있는 생성 모델을 찾지 못했습니다.")
 
 
+def _request_reference(value: str) -> str:
+    """Normalize a request boundary reference and expose safe client errors."""
+    try:
+        return normalize_user_reference(value)
+    except ValueError as exc:
+        raise HTTPException(400, f"중심본문 형식을 확인하세요: {exc}") from exc
+
+
 def _collect_research_packet(data, client: LMStudioClient) -> dict:
-    query = " ".join(x for x in [data.main_reference, data.topic, data.details] if x).strip()
+    normalized_reference = normalize_user_reference(data.main_reference) if data.main_reference.strip() else ""
+    query = " ".join(x for x in [normalized_reference, data.topic, data.details] if x).strip()
     search_mode = "문자검색"
     search_results = search_passages(query, limit=32)
     doctrine_notes = []
@@ -453,7 +462,7 @@ def _collect_research_packet(data, client: LMStudioClient) -> dict:
         except (ConnectionError, RuntimeError, ValueError):
             doctrine_notes = []
             doctrine_search_mode = "교리 검색 오류(근거 제외)"
-    packet = build_research_packet(data.main_reference, search_results, doctrine_notes, tradition=data.tradition)
+    packet = build_research_packet(normalized_reference, search_results, doctrine_notes, tradition=data.tradition)
     packet["search_mode"] = search_mode
     packet["embedding_model"] = data.embedding_model
     packet["tradition"] = data.tradition
@@ -471,7 +480,12 @@ def _preflight_result(data: PreflightRequest) -> dict:
         steps.append({"key": key, "label": label, "state": state, "required": required, "detail": detail})
 
     topic = data.topic.strip()
-    reference = data.main_reference.strip()
+    reference_error = None
+    try:
+        reference = normalize_user_reference(data.main_reference) if data.main_reference.strip() else ""
+    except ValueError as exc:
+        reference_error = str(exc)
+        reference = ""
     add("request", "설교 요청", "pass" if topic else "fail", True, "주제 입력 완료" if topic else "설교 주제를 입력하세요.")
     add("duration", "설교 시간", "pass", True, f"공식 시간 {data.minutes}분 · {data.reading_cpm}자/분 · 목표 약 {data.minutes * data.reading_cpm:,}자")
 
@@ -499,7 +513,9 @@ def _preflight_result(data: PreflightRequest) -> dict:
         add("lmstudio", "LM Studio 생성 모델", "fail", True, str(exc))
 
     packet = None
-    if not reference:
+    if reference_error:
+        add("main_reference", "중심본문", "fail", True, reference_error)
+    elif not reference:
         add("main_reference", "중심본문", "fail", True, "중심본문을 입력하세요.")
     elif database.get("passages", 0):
         packet_data = ResearchPacketRequest(
@@ -1034,6 +1050,7 @@ def study_passage(reference: str, model: str = "", limit: int = 6):
 @app.post("/api/research/packet")
 def research_packet(data: ResearchPacketRequest):
     """Preview the exact evidence path that sermon generation will use."""
+    data = data.model_copy(update={"main_reference": _request_reference(data.main_reference)})
     packet = _collect_research_packet(data, LMStudioClient())
     if not packet["readiness"]["generation_ready"]:
         if packet.get("missing_main_references"):
@@ -1069,7 +1086,7 @@ def notebooklm_pack(data: NotebookPackRequest):
     if not data.confirmed_cloud_export:
         raise HTTPException(400, "저작권·개인정보·클라우드 전송 주의사항을 확인해야 자료팩을 만들 수 있습니다.")
     try:
-        reference = normalize_reference(data.main_reference)
+        reference = _request_reference(data.main_reference)
         packet = build_research_packet(reference)
         if not packet.get("readiness", {}).get("generation_ready"):
             missing = packet.get("missing_main_references") or []
@@ -1131,9 +1148,9 @@ def preflight_check(data: PreflightRequest):
 @app.post("/api/outline")
 def create_outline(data: SermonOutlineRequest, request: Request = None):
     try:
-        normalized_reference = normalize_reference(data.main_reference)
-    except ValueError as exc:
-        raise HTTPException(400, f"중심본문 형식을 확인하세요: {exc}") from exc
+        normalized_reference = _request_reference(data.main_reference)
+    except HTTPException:
+        raise
     packet = build_research_packet(normalized_reference)
     study = packet["study"]
     evidence = list(packet.get("bible_sources") or [])
@@ -1440,6 +1457,7 @@ def generate_sermon(data: SermonRequest, request: Request = None):
         )
     if not data.main_reference.strip():
         raise HTTPException(400, "근거 기반 설교를 생성하려면 중심본문을 입력하세요.")
+    data = data.model_copy(update={"main_reference": _request_reference(data.main_reference)})
     client = LMStudioClient()
     client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
     reading_cpm = data.reading_cpm or get_reading_cpm()

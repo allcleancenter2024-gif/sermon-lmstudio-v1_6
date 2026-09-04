@@ -106,6 +106,8 @@ def parse_reference(reference: str) -> ReferenceRange:
     if not match:
         raise ValueError("성경 참조는 예: 요 8:32 또는 MAT 14:27-31 형식이어야 합니다.")
     book, chapter_text, start_text, end_chapter_text, end_text = match.groups()
+    if any(marker in book for marker in (":", "과", "및", ",", ";", "，", "、")):
+        raise ValueError("성경 참조에 여러 책·절 표현이 결합되어 있습니다. 중심본문 범위를 하나만 입력하세요.")
     chapter, start = int(chapter_text), int(start_text)
     end_chapter = int(end_chapter_text) if end_chapter_text else chapter
     end = int(end_text) if end_text else start
@@ -130,6 +132,35 @@ def normalize_reference(reference: str) -> str:
     if parsed.start_verse == parsed.end_verse:
         return f"{parsed.book} {parsed.chapter}:{parsed.start_verse}"
     return f"{parsed.book} {parsed.chapter}:{parsed.start_verse}-{parsed.end_verse}"
+
+
+def normalize_user_reference(reference: str) -> str:
+    """Normalize a user-entered reference and safely collapse duplicate suffixes.
+
+    Some UI/model paths can repeat a range while describing point references,
+    for example ``야고보서 4:1-10 과 야고보서 4:1``.  This is safe to collapse
+    only when every additional reference is contained in the first range.
+    Distinct or ambiguous references remain errors instead of being guessed.
+    """
+    raw = str(reference or "").strip()
+    try:
+        return normalize_reference(raw)
+    except ValueError as original_error:
+        parts = [part.strip() for part in re.split(r"\s+(?:과|및)\s+|[,;，、]+", raw) if part.strip()]
+        if len(parts) < 2:
+            raise original_error
+        parsed = []
+        for part in parts:
+            try:
+                parsed.append(parse_reference(part))
+            except ValueError as exc:
+                raise ValueError(f"중심본문 참조를 하나의 범위로 해석할 수 없습니다: {part}") from exc
+        first = parsed[0]
+        if any(item.book != first.book or item.chapter != first.chapter for item in parsed[1:]):
+            raise ValueError("서로 다른 책·장을 하나의 중심본문으로 입력할 수 없습니다. 중심본문 범위를 하나만 입력하세요.")
+        if any(item.start_verse < first.start_verse or item.end_verse > first.end_verse for item in parsed[1:]):
+            raise ValueError("중심본문에 서로 다른 범위가 섞였습니다. 가장 넓은 범위를 하나만 입력하세요.")
+        return normalize_reference(parts[0])
 
 
 def primary_original_language(reference: str) -> str:
