@@ -19,7 +19,7 @@
 
   <nav class="quick-nav" aria-label="주요 작업 바로가기">
     <div class="quick-nav-inner">
-      <button id="toggleSideMenuTop" class="menu-toggle" type="button" aria-label="좌측 메뉴 열기/닫기">☰ 메뉴</button>
+      <button id="toggleSideMenuTop" class="menu-toggle" type="button" aria-expanded="true" aria-controls="sideMenu" aria-label="좌측 메뉴 열기/닫기">☰ 메뉴</button>
       <span class="quick-nav-title">빠른 이동</span>
       <button type="button" data-jump="firstRunPanel">준비상태</button>
       <button type="button" data-jump="requestPanel">1. 설교 입력</button>
@@ -80,6 +80,20 @@
       <div class="guide-practice guide-hebrew-practice" aria-labelledby="guideHebrewPracticeTitle"><div class="guide-practice-head"><div><p class="eyebrow-dark">PRACTICE FLOW · ISA 41:10</p><h3 id="guideHebrewPracticeTitle">구약 히브리어 실습</h3><p class="notice">OSHB가 등록된 경우 히브리어 원어 연결을 확인하는 흐름입니다. 자료가 없으면 자동 보완하지 않고 상태를 안내합니다.</p></div><span class="guide-reference-chip">ISA 41:10</span></div><div class="guide-practice-steps"><article><b>1</b><strong>히브리어 본문 준비</strong><p>OSHB 파일을 선택하고 출처·사용조건을 확인합니다.</p><button type="button" data-guide-reference="ISA 41:10" data-guide-language="he" data-guide-action="register" data-jump="languagePanel">등록 화면 열기</button></article><article><b>2</b><strong>원어 근거 확인</strong><p>등록된 lemma·뜻·형태가 해당 절에 연결되는지 확인합니다.</p><button type="button" data-guide-reference="ISA 41:10" data-guide-language="he" data-guide-action="coverage" data-jump="languagePanel">연결상태 점검</button></article><article><b>3</b><strong>설교 반영 전 검토</strong><p>출처와 사용조건이 있는 근거만 설교 생성 전에 사용합니다.</p><button type="button" data-guide-reference="ISA 41:10" data-guide-language="he" data-guide-action="register" data-jump="languagePanel">근거 등록 단계 보기</button></article></div></div>
     </section>
 
+    <section id="installGuidePanel" class="panel full install-guide-panel optional-panel" aria-labelledby="installGuideTitle">
+      <div class="guide-hero"><div><p class="eyebrow-dark">MANAGEMENT · BEGINNER GUIDE</p><h2 id="installGuideTitle">설치및 사용 안내서</h2><p class="notice">처음 설치하는 분도 화면 순서와 폴더 역할을 따라갈 수 있도록 정리한 운영 안내입니다.</p></div><span class="guide-version">V40.9.10<br><small>2026-09-04</small></span></div>
+      <div class="install-flow" aria-label="설치 및 사용 흐름"><div><b>01</b><strong>LM Studio</strong><small>로컬 서버 시작</small></div><i>→</i><div><b>02</b><strong>start.bat</strong><small>프로그램 실행</small></div><i>→</i><div><b>03</b><strong>준비상태</strong><small>연결·DB 확인</small></div><i>→</i><div><b>04</b><strong>설교 생성</strong><small>검토 후 출력</small></div></div>
+      <div class="install-guide-grid"><article class="guide-card"><div class="guide-card-head"><span class="guide-number">A</span><div><h3>처음 실행</h3><small>5분 준비</small></div></div><ol><li>LM Studio에서 로컬 서버를 시작합니다.</li><li>주소는 <code>http://127.0.0.1:12345/v1</code>로 둡니다.</li><li>프로젝트 폴더의 <code>start.bat</code>를 실행합니다.</li><li>로그인 후 상단 연결·모델·성경 DB 상태를 확인합니다.</li></ol></article><article class="guide-card"><div class="guide-card-head"><span class="guide-number">B</span><div><h3>설교 작성</h3><small>화면 순서</small></div></div><ol><li><b>설교 입력</b>에서 주제·중심본문·시간을 입력합니다.</li><li><b>본문 연구</b>에서 성경·번역·원어 근거를 확인합니다.</li><li><b>구조·생성</b>에서 Preflight 후 초안을 생성합니다.</li><li><b>결과·근거</b>를 검토하고 승인 후 저장·출력합니다.</li></ol></article><article class="guide-card install-folder-card"><div class="guide-card-head"><span class="guide-number">C</span><div><h3>폴더 역할</h3><small>자료를 찾는 위치</small></div></div><pre aria-label="프로젝트 폴더 구조">app/       핵심 기능
+static/    화면 CSS·JavaScript
+templates/ 화면 HTML
+data/      성경·원어·실행 DB
+backups/   백업 파일
+exports/   출력 파일
+docs/      운영 문서
+scripts/   복구 도구</pre></article><article class="guide-card"><div class="guide-card-head"><span class="guide-number">D</span><div><h3>문제 발생 시</h3><small>안전한 복구</small></div></div><ol><li><b>준비진단</b>에서 연결과 DB를 다시 확인합니다.</li><li>최근 변경사항을 <b>변경사항 안내</b>에서 확인합니다.</li><li>PowerShell에서 <code>.\scripts\restore_known_good.ps1</code>로 먼저 미리보기합니다.</li><li>확인 후 <code>-Apply</code>를 붙이면 현재 기준 커밋으로 추적 파일을 복구합니다.</li></ol><p class="guide-tip">복구 도구는 사용자 DB·백업·출력물·원어 파일을 삭제하지 않습니다.</p></article></div>
+      <details class="guide-details"><summary>초보자용 안전 체크리스트</summary><ul><li>LM Studio는 외부 공개 주소가 아닌 127.0.0.1 로컬 주소만 사용합니다.</li><li>원어의 히브리어·헬라어 표기와 발음기호는 참고용이며 목회자 검토가 필요합니다.</li><li>중심본문이 DB에 없거나 근거 검증이 실패하면 생성을 진행하지 않습니다.</li><li>백업·복구 전에는 현재 작업 중인 설교를 저장합니다.</li><li>상세 문서는 프로젝트의 <code>docs/INSTALLATION_AND_OPERATIONS_GUIDE.md</code>에서 확인합니다.</li></ul></details>
+    </section>
+
     <section id="readinessPanel" class="panel full readiness-panel optional-panel">
       <div class="section-head"><div><h2>V40 Windows 실사용 준비진단</h2><p class="notice">LM Studio·성경 DB·15분 기본값·저장 폴더·PDF 환경을 한 번에 확인합니다.</p></div><button id="runReadiness" type="button">실사용 준비 다시 점검</button></div>
       <div id="readinessStatus" class="import-status">실행 환경을 점검하고 있습니다…</div>
@@ -107,8 +121,8 @@
     <section id="workSummaryPanel" class="panel full work-summary-panel optional-panel" aria-labelledby="workSummaryTitle">
       <div class="work-summary-head"><div><p class="eyebrow-dark">SERMON LM STUDIO · PROJECT SUMMARY</p><h2 id="workSummaryTitle">Sermon LM Studio 작업 종합 대시보드</h2><p class="notice">Phase 0부터 현재까지의 구조 개선, 원어 자료, 생성 보호, 미리보기·출력 기능을 한 화면에서 확인합니다.</p></div><div class="work-summary-actions"><button id="workSummaryMarkdown" type="button">Markdown 저장</button><button id="workSummaryHtml" type="button">HTML 저장</button><button id="workSummaryPrint" type="button">PDF / 인쇄</button></div></div>
       <div class="work-summary-hero"><div><strong>현재 판정</strong><p id="workSummaryVerdict">최적화 완료 · 검증 통과</p><small id="workSummarySummary">인쇄 전용 출력 루트, 승인 잠금 HWPX, 원어 자료 등록, 기존 기능 호환성을 확인했습니다.</small></div><span id="workSummaryVersion">V40.9.10</span></div>
-      <p class="optimization-complete-banner">[2026년9월2일 최적화 작업 완료] 현재 적용된 기능과 안정성 검증을 모두 반영했습니다.</p>
-      <div class="work-summary-stats"><div><b id="workSummaryCommitCount">-</b><small>최근 Git 커밋</small></div><div><b id="workSummaryChangedState">-</b><small>작업 트리 상태</small></div><div><b id="workSummaryChangedFiles">-</b><small>최신 변경 파일</small></div><div><b>265</b><small>전체 pytest 통과</small></div></div>
+      <p class="optimization-complete-banner">[2026-09-04 운영 안정화 작업 완료] 현재 적용된 기능과 정상상태 복구 절차를 반영했습니다.</p>
+      <div class="work-summary-stats"><div><b id="workSummaryCommitCount">-</b><small>최근 Git 커밋</small></div><div><b id="workSummaryChangedState">-</b><small>작업 트리 상태</small></div><div><b id="workSummaryChangedFiles">-</b><small>최신 변경 파일</small></div><div><b>361</b><small>전체 pytest 통과</small></div></div>
       <h3>최근 작업 자동 요약</h3><div id="workSummaryRecent" class="work-summary-table"><div class="work-summary-row"><span>Git 이력</span><span>불러오는 중</span><em>확인 중</em><span>최근 변경사항을 자동으로 읽고 있습니다.</span></div></div>
       <div class="work-summary-columns"><article><h3>완료된 최적화</h3><ul><li>설교 작성 7단계 흐름·완료 상태 UI</li><li>SBLGNT·MorphGNT·Apparatus·Alignment 조회</li><li>초안 예외 미리보기·수동 수정본 재감사</li><li>인쇄 전용 문서와 HWPX 한글파일 출력</li><li>265개 전체 회귀 테스트 통과</li></ul></article><article><h3>안전·호환성 유지</h3><ul><li>기존 API URL·응답 형식 유지</li><li>SQLite schema·기존 데이터 보존</li><li>성경 중심본문·Evidence 검증 유지</li><li>LM Studio localhost Provider 유지</li><li>Web Grounding 기본값 OFF</li></ul></article></div>
       <p class="work-summary-footnote">PDF 버튼은 브라우저 인쇄 대화상자를 열어 “PDF로 저장”을 지원합니다. 모든 내보내기는 현재 화면의 요약 정보만 사용하며 원문·개인정보를 외부로 전송하지 않습니다.</p>
@@ -149,7 +163,7 @@
       </div>
     </section>
 
-    <section id="requestPanel" class="panel form-panel">
+    <section id="requestPanel" class="panel full form-panel">
       <h2>1. 설교 요청</h2>
       <label>설교 주제<input id="topic" placeholder="예: 두려움 속에서도 함께하시는 하나님"></label>
       <label>세부사항<textarea id="details" rows="5" placeholder="예: 경제적 어려움과 불안 가운데 하나님을 신뢰하는 믿음"></textarea></label>
@@ -166,7 +180,7 @@
         <button id="saveLmStudio" type="button">저장 · 연결 시험</button>
         <span id="lmStudioMessage">OpenAI 호환 API와 LM Studio REST API를 순서대로 진단하고 있습니다…</span>
       </div>
-      <label>LM Studio 생성 모델<select id="model"><option value="">연결 후 자동 선택</option></select></label>
+      <label>LM Studio 생성 모델<select id="model"><option value="">연결 후 자동 선택</option></select><small id="modelHint" class="field-hint">설교시간에 맞는 READY 모델 자동 선택 · 목록에서 수동 선택 가능</small></label>
       <div class="rag-box">
         <div><b>RAG 초기설정 · 5단계 진단</b><small>연결부터 성경 데이터와 인덱스까지 순서대로 확인합니다. 초록색 5개가 모두 켜지면 관련구절 의미검색을 사용할 수 있습니다.</small></div>
         <div id="ragSetupSteps" class="rag-setup-steps" aria-live="polite">

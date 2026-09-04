@@ -1,3 +1,4 @@
+import hashlib
 import sqlite3
 import tempfile
 import unittest
@@ -39,7 +40,8 @@ class DoctrineProcessingTests(unittest.TestCase):
             with closing(sqlite3.connect(db)) as con, con:
                 con.execute("INSERT INTO denominations(code,name_ko,created_at,updated_at) VALUES('TEST','테스트',datetime('now'),datetime('now'))")
                 con.execute("""INSERT INTO doctrine_sources(denomination_id,title,source_url,source_authority,license_status,active,created_at,updated_at) VALUES(1,'자료','https://www.kmc.or.kr/x','OFFICIAL_DENOMINATION','VERIFIED',1,datetime('now'),datetime('now'))""")
-                con.execute("""INSERT INTO doctrine_documents(source_id,title,content_hash,object_storage_key,mime_type,created_at) VALUES(1,'문서',?,?,'text/html',datetime('now'))""", ('a' * 64, key))
+                content_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+                con.execute("""INSERT INTO doctrine_documents(source_id,title,content_hash,object_storage_key,mime_type,created_at) VALUES(1,'문서',?,?,'text/html',datetime('now'))""", (content_hash, key))
             result = process_doctrine_document(1, db, archive)
             self.assertEqual(result["review_status"], "NEEDS_REVIEW")
             with closing(sqlite3.connect(db)) as con, con:

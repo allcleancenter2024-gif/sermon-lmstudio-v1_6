@@ -170,15 +170,16 @@ def snapshot_source(source_id: int, db_path: Path, archive_root: Path = DATA_DIR
         minio_store = None
         if os.getenv('MINIO_ENABLED', '').strip().casefold() in {'1', 'true', 'yes', 'on'}:
             minio_store = MinioObjectStore.from_env()
-            remote_key = f"production/{key}"
+            remote_prefix = os.getenv('MINIO_PROD_PREFIX', 'production/').strip('/') + '/'
+            remote_key = f"{remote_prefix}{key}"
             minio_store.put_bytes(remote_key, result['body'], content_hash)
         object_path = archive_root / key.replace("/", "\\")
         metadata_key = f"{key.rsplit('/', 1)[0]}/metadata.json"
         metadata_payload = json.dumps({"source_id": source_id, "source_url": result["final_url"], "content_hash": content_hash, "mime_type": result["mime_type"], "retrieved_at": job_time}, ensure_ascii=False, indent=2).encode("utf-8")
         if changed and not object_path.with_name("metadata.json").exists():
             object_path.with_name("metadata.json").write_bytes(metadata_payload)
-        if changed and minio_store:
-            minio_store.put_bytes(f"production/{metadata_key}", metadata_payload, hashlib.sha256(metadata_payload).hexdigest())
+        if changed and minio_store and not minio_store.exists(f"{remote_prefix}{metadata_key}"):
+            minio_store.put_bytes(f"{remote_prefix}{metadata_key}", metadata_payload, hashlib.sha256(metadata_payload).hexdigest())
         with closing(sqlite3.connect(db_path)) as con, con:
             document_id = None
             if changed:

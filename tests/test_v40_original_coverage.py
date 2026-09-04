@@ -85,6 +85,13 @@ class V40OriginalCoverageTests(unittest.TestCase):
         self.assertEqual(items[0]["lemma"], "H7225")
         self.assertEqual(items[0]["gloss"], "beginning, first")
 
+    def test_strongs_lexicon_merges_repeated_lemma_senses(self):
+        xml = """<strongsdictionary><entry><greek unicode=\"λόγος\" translit=\"logos\"/><strongs_def>word</strongs_def></entry><entry><greek unicode=\"λόγος\" translit=\"logos\"/><strongs_def>message</strongs_def></entry></strongsdictionary>"""
+        source_format, items = convert_lexicon_source(xml, "strongs_greek_xml")
+        self.assertEqual(source_format, "strongs_greek_xml")
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["gloss"], "word · message")
+
     def test_ui_preserves_routed_original_role_on_second_preview_click(self):
         js = Path("static/app.js").read_text(encoding="utf-8")
         self.assertIn("routedOriginalFile&&file===routedOriginalFile", js)

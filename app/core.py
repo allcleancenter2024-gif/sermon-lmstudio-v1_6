@@ -336,8 +336,13 @@ def lexicon_lookup_key(language: str, lemma: str) -> str:
         parts = [part for part in re.split(r"[/+]", key) if part]
         if parts:
             key = parts[-1]
-        if re.fullmatch(r"h\d+[a-z]?", key):
-            key = key[1:]
+        # OSHB augmented Strong keys may be written as ``3588 a`` or
+        # ``H3588a`` while HebrewStrong.xml stores the base entry as H3588.
+        # Resolve only the numeric base key; the AugIndex suffix is an index
+        # identifier, not an independent dictionary meaning.
+        match = re.fullmatch(r"h?\s*(\d+)(?:\s*[a-z])?", key)
+        if match:
+            key = match.group(1)
     return key
 
 
@@ -2153,6 +2158,44 @@ def build_resize_prompt(sermon: str, target_minutes: int, passages: list[dict], 
 {sermon}
 
 제목과 모든 주요 섹션을 유지하면서 목표 분량에 가깝게 완결된 설교문 전체를 다시 출력하십시오."""
+    return system, user
+
+
+def build_continuation_prompt(
+    sermon: str,
+    target_minutes: int,
+    passages: list[dict],
+    word_notes: list[dict],
+    chars_per_minute: int = 330,
+) -> tuple[str, str]:
+    """Build one bounded, evidence-preserving continuation for short drafts."""
+    system = """당신은 이미 작성된 설교 초안을 이어 쓰는 편집자입니다.
+기존 원고를 반복하거나 다시 쓰지 말고, 자연스럽게 이어지는 본문만 작성하십시오.
+제공된 성경·원어 근거만 사용하고 새 성경 참조, 원어 뜻, 역사 사실을 기억으로 추가하지 마십시오.
+원어를 설명할 때는 등록된 원문·발음/음역·뜻·형태·출처 범위만 사용하십시오.
+제목, 서론, 이미 작성된 문장을 반복하지 말고 대지의 적용·목회적 권면·결론을 보강하십시오.
+Markdown 형식의 설교 본문만 출력하고 설명이나 reasoning은 출력하지 마십시오."""
+    original_block = "\n".join(
+        f"[{n.get('reference','')} | {n.get('language','')}] {n.get('lemma','')} / "
+        f"원문: {n.get('original','')} / 발음: {n.get('transliteration','')} / "
+        f"뜻: {n.get('gloss','')} / 형태: {n.get('morphology','')} / "
+        f"출처: {n.get('source','')} / 사전출처: {n.get('lexicon_source','')}"
+        for n in list(word_notes or [])[:12]
+    ) or "등록 원어 근거 없음"
+    user = f"""목표 낭독시간: 약 {target_minutes}분
+분량 계산 기준: 사용자 낭독속도 공백 제외 약 {chars_per_minute}자/분
+현재 초안 뒤에 약 {max(400, int(target_minutes * chars_per_minute * 0.35))}자 분량을 이어 쓰십시오.
+
+[허용된 성경 근거]
+{build_grounding(_round_robin_references(list(passages or []), 8), max_chars=2200)}
+
+[허용된 원어 근거]
+{original_block}
+
+[현재까지 작성된 설교]
+{sermon}
+
+현재 원고의 마지막 문장 다음부터 이어 쓰십시오. 이미 작성된 문장을 복사하지 말고, 적용과 결론을 중심으로 완결감을 높이십시오."""
     return system, user
 
 

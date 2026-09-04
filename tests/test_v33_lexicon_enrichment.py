@@ -87,6 +87,8 @@ class V33LexiconEnrichmentTests(unittest.TestCase):
         self.assertEqual(lexicon_lookup_key("he", "H7225"), "7225")
         self.assertEqual(lexicon_lookup_key("he", "c/7225"), "7225")
         self.assertEqual(lexicon_lookup_key("he", "7225"), "7225")
+        self.assertEqual(lexicon_lookup_key("he", "3588 a"), "3588")
+        self.assertEqual(lexicon_lookup_key("he", "H3588a"), "3588")
 
     def test_import_is_idempotent_and_updates_same_source(self):
         item = [{"language": "grc", "lemma": "λόγος", "transliteration": "logos", "gloss": "말씀"}]

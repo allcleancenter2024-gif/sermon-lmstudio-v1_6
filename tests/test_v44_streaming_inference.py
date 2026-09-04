@@ -92,6 +92,16 @@ class V44StreamingInferenceTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "추론 비활성화 정책"):
                 client.chat("ready-model", "system", "user")
 
+    def test_thinking_tags_inside_content_are_rejected(self):
+        response = FakeStreamResponse([
+            b'data: {"choices":[{"delta":{"content":"<think>internal"}}]}\n\n',
+            b'data: [DONE]\n\n',
+        ])
+        client = LMStudioClient("http://127.0.0.1:12345/v1")
+        with patch("app.core.urllib.request.urlopen", return_value=response):
+            with self.assertRaisesRegex(RuntimeError, "추론 비활성화 정책"):
+                client.chat("ready-model", "system", "user")
+
     def test_reasoning_only_stream_retries_with_thinking_disabled(self):
         thinking = FakeStreamResponse([
             b'data: {"choices":[{"delta":{"reasoning_content":"thinking"}}]}\n\n',

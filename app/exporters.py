@@ -23,6 +23,25 @@ def sermon_with_media_prompts(sermon: str, meta: dict) -> str:
     return f"{sermon.rstrip()}\n\n{appendix}" if appendix else sermon
 
 
+def original_language_markdown(notes: list[dict]) -> str:
+    """Render the registered original-language evidence with both source layers."""
+    if not notes:
+        return ""
+    lines = ["## 히브리어·헬라어 원어 근거", ""]
+    for note in notes:
+        lines.extend([
+            f"### {note.get('reference', '')} · {note.get('language', '')} · {note.get('lemma', '')}",
+            f"- 원문: {note.get('original', '')}",
+            f"- 발음/음역: {note.get('transliteration') or '사전 음역 미등록'}",
+            f"- 뜻: {note.get('gloss') or '사전 뜻 미등록'}",
+            f"- 형태·문법: {note.get('morphology') or '형태·문법 미등록'}",
+            f"- 본문 자료 출처: {note.get('source') or '미기록'} · 사용조건: {note.get('license_note') or '미기록'}",
+            f"- 사전 보강 출처: {note.get('lexicon_source') or '미기록'} · 사용조건: {note.get('lexicon_license_note') or '미기록'}",
+            "",
+        ])
+    return "\n".join(lines).rstrip()
+
+
 def _font_path(filename: str) -> Path:
     user_path = USER_FONT_DIR / filename
     return user_path if user_path.exists() else FONT_DIR / filename
@@ -84,7 +103,7 @@ def dashboard_html(*, sermon: str, meta: dict, sources: list[dict]) -> str:
     project = meta.get("project", {}) if isinstance(meta.get("project"), dict) else {}
     note_cards = "".join(
         f'''<article class="source"><div><b>{esc(n.get('language'))} · {esc(n.get('lemma'))}</b><span>{esc(n.get('transliteration'))}</span></div>
-        <p><b>뜻</b> {esc(n.get('gloss'))}<br><b>형태</b> {esc(n.get('morphology'))}</p><small>{esc(n.get('source'))} · {esc(n.get('license_note'))}</small></article>'''
+        <p><b>뜻</b> {esc(n.get('gloss'))}<br><b>형태</b> {esc(n.get('morphology'))}</p><small>본문 자료: {esc(n.get('source'))} · {esc(n.get('license_note'))}<br>사전 보강: {esc(n.get('lexicon_source'))} · {esc(n.get('lexicon_license_note'))}</small></article>'''
         for n in notes
     ) or '<p>등록된 원어 어휘 근거가 없습니다.</p>'
     return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -193,7 +212,7 @@ def pdf_document_html(*, sermon: str, meta: dict, sources: list[dict]) -> str:
     esc = lambda v: html.escape(str(v or ""))
     notes = meta.get("original_notes", []) if isinstance(meta.get("original_notes", []), list) else []
     evidence = "".join(f"<tr><td>{esc(s.get('reference'))}</td><td>{esc(s.get('translation'))}</td><td>{esc(s.get('text'))}</td></tr>" for s in sources[:24])
-    note_rows = "".join(f"<tr><td>{esc(n.get('language'))}</td><td>{esc(n.get('lemma'))}</td><td>{esc(n.get('transliteration'))}</td><td>{esc(n.get('gloss'))}</td><td>{esc(n.get('source'))}</td></tr>" for n in notes)
+    note_rows = "".join(f"<tr><td>{esc(n.get('language'))}</td><td>{esc(n.get('lemma'))}</td><td>{esc(n.get('transliteration'))}</td><td>{esc(n.get('gloss'))}</td><td>본문: {esc(n.get('source'))}<br>사전: {esc(n.get('lexicon_source'))}<br>사용조건: {esc(n.get('lexicon_license_note'))}</td></tr>" for n in notes)
     audit = meta.get("audit", {}) if isinstance(meta.get("audit", {}), dict) else {}
     review = meta.get("review_state", {}) if isinstance(meta.get("review_state", {}), dict) else {}
     project = meta.get("project", {}) if isinstance(meta.get("project"), dict) else {}
@@ -318,6 +337,17 @@ def write_docx(path: Path, *, sermon: str, meta: dict) -> None:
     doc.add_paragraph(f"명시 근거 연결 {citation.get('mapped_count',0)}건 · 근거 확인 필요 {citation.get('unsupported_count',0)}건")
     for item in citation.get("unsupported_claims", [])[:30]:
         doc.add_paragraph(f"[확인 필요 · 문장 {item.get('sentence')}] {item.get('text','')}")
+    notes = meta.get("original_notes", []) if isinstance(meta.get("original_notes", []), list) else []
+    if notes:
+        doc.add_paragraph("히브리어·헬라어 원어 근거", style="Heading 2")
+        for note in notes:
+            doc.add_paragraph(f"{note.get('reference', '')} · {note.get('language', '')} · {note.get('lemma', '')}", style="Heading 3")
+            doc.add_paragraph(
+                f"원문: {note.get('original', '')} · 발음/음역: {note.get('transliteration') or '사전 음역 미등록'}\n"
+                f"뜻: {note.get('gloss') or '사전 뜻 미등록'} · 형태·문법: {note.get('morphology') or '형태·문법 미등록'}\n"
+                f"본문 자료 출처: {note.get('source') or '미기록'} · {note.get('license_note') or '미기록'}\n"
+                f"사전 보강 출처: {note.get('lexicon_source') or '미기록'} · {note.get('lexicon_license_note') or '미기록'}"
+            )
     footer=section.footer.paragraphs[0]; footer.alignment=WD_ALIGN_PARAGRAPH.CENTER; footer.add_run("LM Studio 로컬 AI · " + ("목회자 승인 최종 잠금본" if review.get("state") == "locked" else "설교 초안 · 목회자 검토 필요")).font.size=Pt(8)
     doc.save(path)
 
@@ -388,7 +418,10 @@ def write_final_package(path: Path, *, sermon: str, meta: dict, sources: list[di
         html_path = temp / "dashboard.html"
         docx_path = temp / "sermon.docx"
         pdf_path = temp / "sermon.pdf"
-        md_path.write_text(sermon_with_media_prompts(sermon, package_meta), encoding="utf-8")
+        markdown = sermon_with_media_prompts(sermon, package_meta)
+        original_notes = package_meta.get("original_notes", []) if isinstance(package_meta.get("original_notes", []), list) else []
+        evidence_markdown = original_language_markdown(original_notes)
+        md_path.write_text(f"{markdown}\n\n{evidence_markdown}" if evidence_markdown else markdown, encoding="utf-8")
         media_path = temp / "media_prompts.md"
         media_path.write_text(media_prompts_markdown(package_meta.get("media_prompts")), encoding="utf-8")
         html_path.write_text(dashboard_html(sermon=sermon, meta=package_meta, sources=sources), encoding="utf-8")

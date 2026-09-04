@@ -290,6 +290,15 @@ class LMStudioClient:
                         except (KeyError, IndexError, TypeError):
                             pass
                         piece = self._stream_piece(event)
+                        if self._text_contains_reasoning(piece):
+                            try:
+                                response.close()
+                            except (AttributeError, OSError):
+                                pass
+                            raise RuntimeError(
+                                "모델이 추론 비활성화 정책을 위반해 thinking 태그를 본문에 포함했습니다. "
+                                "생성 결과를 폐기했습니다."
+                            )
                         if piece:
                             pieces.append(piece)
                         # Some OpenAI-compatible local servers emit the final
@@ -346,7 +355,16 @@ class LMStudioClient:
             message = choice.get("message") if isinstance(choice.get("message"), dict) else {}
             if delta.get("reasoning_content") or delta.get("reasoning") or message.get("reasoning_content") or message.get("reasoning"):
                 return True
+            content = delta.get("content") or message.get("content")
+            if isinstance(content, str) and LMStudioClient._text_contains_reasoning(content):
+                return True
         return False
+
+    @staticmethod
+    def _text_contains_reasoning(text: str) -> bool:
+        """Reject leaked model thinking even when it is placed in content."""
+        lowered = str(text or "").lower()
+        return any(marker in lowered for marker in ("<think>", "</think>", "<|thinking|>", "<|/thinking|>"))
 
     def chat(
         self, model: str, system: str, user: str, temperature: float = 0.35,

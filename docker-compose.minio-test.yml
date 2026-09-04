@@ -1,0 +1,62 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: sermon-postgres-test
+    restart: "no"
+    environment:
+      POSTGRES_DB: sermon_db_test
+      POSTGRES_USER: sermon_user
+      POSTGRES_PASSWORD: sermon_test_password
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - sermon_postgres_test_data:/var/lib/postgresql/data
+      - ./postgres-test-init.sql:/docker-entrypoint-initdb.d/001-object-storage.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sermon_user -d sermon_db_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-test:
+    image: minio/minio:latest
+    container_name: sermon-minio-test
+    restart: "no"
+    command: server /data --address ":9000" --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sermon_test_access
+      MINIO_ROOT_PASSWORD: sermon_test_secret_change_me
+    ports:
+      - "127.0.0.1:19000:9000"
+      - "127.0.0.1:19001:9001"
+    volumes:
+      - sermon_minio_test_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-test-init:
+    image: minio/mc:latest
+    container_name: sermon-minio-test-init
+    restart: "no"
+    depends_on:
+      minio-test:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      "mc alias set local http://minio-test:9000 sermon_test_access sermon_test_secret_change_me
+      && mc mb --ignore-existing local/sermon-documents-test
+      && (mc admin policy remove local doctrine-archive-prefix || true)
+      && mc admin policy create local doctrine-archive-prefix /config/minio-test-policy.json
+      && (mc admin user add local sermon_doctrine_test sermon_doctrine_test_secret || true)
+      && mc admin policy attach local doctrine-archive-prefix --user sermon_doctrine_test"
+    volumes:
+      - ./minio-test-policy.json:/config/minio-test-policy.json:ro
+
+volumes:
+  sermon_minio_test_data:
+    name: sermon-minio-test-data
+  sermon_postgres_test_data:
+    name: sermon-postgres-test-data

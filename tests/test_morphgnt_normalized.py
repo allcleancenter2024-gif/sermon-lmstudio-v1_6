@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.morphgnt import import_morphgnt_directory, parse_morphgnt_content
+from app.morphgnt import backfill_greek_pronunciations, import_morphgnt_directory, parse_morphgnt_content
 from app.repositories.greek_morphology import get_tokens, search_by_lemma
 
 
@@ -43,3 +43,33 @@ class MorphGntNormalizedTests(unittest.TestCase):
             self.assertEqual(second["rows"], 28)
             self.assertEqual(len(get_tokens("JHN", 1, 1, db)), 2)
             self.assertEqual(len(search_by_lemma("ἐν", db_path=db)), 1)
+
+    def test_backfill_uses_morphgnt_surface_forms_and_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "test.db"
+            con = __import__("sqlite3").connect(db)
+            try:
+                con.execute("""CREATE TABLE greek_nt_tokens (
+                    book_code TEXT, chapter INTEGER, verse INTEGER, token_index INTEGER,
+                    text_form TEXT, lemma TEXT
+                )""")
+                con.executemany("INSERT INTO greek_nt_tokens VALUES (?, ?, ?, ?, ?, ?)", [
+                    ("JHN", 1, 1, 1, "Ἐν", "ἐν"),
+                    ("JHN", 1, 1, 2, "ἀρχῇ", "ἀρχή"),
+                ])
+                con.commit()
+            finally:
+                con.close()
+            first = backfill_greek_pronunciations(db)
+            second = backfill_greek_pronunciations(db)
+            self.assertEqual(first["processed_tokens"], 2)
+            self.assertEqual(first["greek_pronunciation_rows"], 2)
+            self.assertEqual(second["greek_pronunciation_rows"], 2)
+            con = __import__("sqlite3").connect(db)
+            try:
+                rows = con.execute("SELECT surface_form, transliteration, source FROM original_pronunciations ORDER BY token_index").fetchall()
+            finally:
+                con.close()
+            self.assertEqual(rows[0][0], "Ἐν")
+            self.assertTrue(rows[0][1])
+            self.assertEqual(rows[0][2], "MorphGNT SBLGNT")

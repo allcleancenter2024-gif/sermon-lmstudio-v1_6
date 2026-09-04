@@ -9,6 +9,7 @@ import os
 from app.core import (
     analyze_citations,
     build_post_generation_quality,
+    build_continuation_prompt,
     build_resize_prompt,
     build_sermon_prompt,
     create_generation_audit,
@@ -22,16 +23,23 @@ from app.media_prompts import build_media_prompt_packet
 def _sermon_max_tokens(target_minutes: int, model: str = "") -> int:
     """Keep local-model generation bounded while scaling with sermon length."""
     if "qwen3" in str(model or "").lower():
-        # Qwen3 local inference can spend disproportionate time on long Korean
-        # completions. Return a usable compact draft first; the UI exposes its
-        # actual reading estimate and leaves later revision to the user.
-        return 512
+        # Qwen3 can be slower on long Korean completions, but a fixed 512-token
+        # cap produces an unusably short draft for a 15-minute sermon. Scale
+        # the first pass with the requested duration while keeping local
+        # inference bounded. The separate auto-resize pass remains disabled for
+        # Qwen3 to avoid a second long rewrite request.
+        return max(1024, min(3072, int(target_minutes) * 200))
     return max(2048, min(4096, int(target_minutes) * 200))
 
 
 def _resize_max_tokens(target_minutes: int) -> int:
     """A resize is a correction pass, so it needs less output budget."""
     return max(384, min(600, int(target_minutes) * 40))
+
+
+def _continuation_max_tokens(target_minutes: int) -> int:
+    """Bound the single Qwen3 continuation pass."""
+    return max(768, min(1536, int(target_minutes) * 100))
 
 
 def _should_auto_resize(model: str) -> bool:
@@ -75,6 +83,23 @@ def generate_sermon_workflow(
         sermon = client.chat(model, system, user, max_tokens=_sermon_max_tokens(data.minutes, model))
 
     resize_count = 0
+    continuation_count = 0
+    if "qwen3" in str(model or "").lower():
+        initial_minutes = estimate_minutes(sermon, reading_cpm)
+        if initial_minutes < data.minutes * 0.90:
+            continuation_system, continuation_user = build_continuation_prompt(
+                sermon, data.minutes, passages, word_notes, reading_cpm
+            )
+            continuation = client.chat(
+                model,
+                continuation_system,
+                continuation_user,
+                temperature=0.25,
+                max_tokens=_continuation_max_tokens(data.minutes),
+            ).strip()
+            if continuation:
+                sermon = f"{sermon.rstrip()}\n\n{continuation}"
+                continuation_count = 1
     # Keep one bounded correction pass. Multiple long local-model correction
     # calls can otherwise leave the UI waiting even after the first sermon is
     # already complete.
@@ -120,6 +145,7 @@ def generate_sermon_workflow(
         "minutes_estimate": minutes_estimate,
         "duration_adjusted": bool(resize_count),
         "duration_adjustments": resize_count,
+        "continuation_count": continuation_count,
         "reading_cpm": reading_cpm,
         "source_count": len(passages),
         "search_mode": search_mode,

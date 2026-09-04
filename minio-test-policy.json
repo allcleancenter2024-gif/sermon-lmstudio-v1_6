@@ -3,23 +3,24 @@
   "Statement": [
     {
       "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation", "s3:GetBucketVersioning", "s3:GetBucketObjectLockConfiguration"],
+      "Resource": "arn:aws:s3:::sermon-documents-test"
+    },
+    {
+      "Effect": "Allow",
       "Action": ["s3:ListBucket"],
-      "Resource": ["arn:aws:s3:::sermon-documents-test"],
-      "Condition": {
-        "StringLike": {
-          "s3:prefix": ["_verification/", "_verification/*"]
-        }
-      }
+      "Resource": "arn:aws:s3:::sermon-documents-test",
+      "Condition": {"StringLike": {"s3:prefix": ["production/doctrine-archive", "production/doctrine-archive/*", "_verification", "_verification/*"]}}
     },
     {
       "Effect": "Allow",
-      "Action": ["s3:GetBucketLocation"],
-      "Resource": ["arn:aws:s3:::sermon-documents-test"]
+      "Action": ["s3:GetObject", "s3:GetObjectVersion", "s3:GetObjectAttributes", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::sermon-documents-test/production/doctrine-archive/*"
     },
     {
       "Effect": "Allow",
-      "Action": ["s3:GetObject", "s3:PutObject"],
-      "Resource": ["arn:aws:s3:::sermon-documents-test/_verification/*"]
+      "Action": ["s3:GetObject", "s3:GetObjectVersion", "s3:GetObjectAttributes", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::sermon-documents-test/_verification/*"
     }
   ]
 }

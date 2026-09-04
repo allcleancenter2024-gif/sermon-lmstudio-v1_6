@@ -12,6 +12,27 @@ DEFAULT_SERMON_MINUTES = 15
 DEFAULT_LMSTUDIO_URL = "http://127.0.0.1:12345/v1"
 LEGACY_LMSTUDIO_URL = "http://127.0.0.1:1234/v1"
 
+RECOMMENDED_GENERATION_MODELS = {
+    15: ("qwen/qwen3.5-9b", "qwen/qwen3-8b"),
+    20: ("qwen/qwen3.5-9b", "qwen/qwen3-8b"),
+    25: ("qwen/qwen3.5-27b", "qwen/qwen3.5-9b", "qwen/qwen3-8b"),
+    30: ("qwen/qwen3.5-27b", "qwen/qwen3.5-9b", "qwen/qwen3-8b"),
+}
+
+
+def recommended_generation_model(minutes: int, available: tuple[str, ...] | list[str]) -> str:
+    """Return the best READY model for a sermon duration."""
+    candidates = RECOMMENDED_GENERATION_MODELS.get(int(minutes), RECOMMENDED_GENERATION_MODELS[15])
+    ready = [str(model) for model in available]
+    for candidate in candidates:
+        exact = next((model for model in ready if model == candidate), "")
+        if exact:
+            return exact
+        suffixed = next((model for model in ready if model.startswith(candidate + ":")), "")
+        if suffixed:
+            return suffixed
+    return ready[0] if ready else ""
+
 INTERPRETATION_FLOW_DEFINITION = (
     ("korean_base", "1. 개역개정 본문", "개역개정 본문을 해석의 출발점으로 읽습니다."),
     ("original_language", "2. 히브리어·헬라어 원문", "본문에 실제 연결된 lemma·형태·뜻만 확인합니다."),

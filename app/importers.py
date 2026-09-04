@@ -596,7 +596,7 @@ def _normalize_lexicon_items(items: list[dict]) -> list[dict]:
     if len(items) > MAX_LEXICON_IMPORT_ITEMS:
         raise ValueError(f"원어 사전은 한 번에 최대 {MAX_LEXICON_IMPORT_ITEMS:,}건까지 검사할 수 있습니다.")
     result = []
-    seen = set()
+    by_key = {}
     for index, raw in enumerate(items, 1):
         if not isinstance(raw, dict):
             raise ValueError(f"{index}번째 원어 사전 항목이 객체 형식이 아닙니다.")
@@ -610,10 +610,25 @@ def _normalize_lexicon_items(items: list[dict]) -> list[dict]:
         if len(language) > 20 or len(lemma) > 200 or len(transliteration) > 200 or len(gloss) > 5000:
             raise ValueError(f"{index}번째 원어 사전 항목이 허용 길이를 초과했습니다.")
         key = (language, lemma.casefold())
-        if key in seen:
-            raise ValueError(f"중복 원어 사전 항목이 있습니다: {language} · {lemma}")
-        seen.add(key)
-        result.append({"language": language, "lemma": lemma, "transliteration": transliteration, "gloss": gloss})
+        existing_index = by_key.get(key)
+        if existing_index is None:
+            by_key[key] = len(result)
+            result.append({"language": language, "lemma": lemma, "transliteration": transliteration, "gloss": gloss})
+            continue
+        # Official Strong dictionaries can contain multiple senses for one
+        # lemma.  The DB joins by language+lemma, so preserve those senses in
+        # one deterministic record instead of rejecting the source as a bad
+        # duplicate.  Repeated identical senses are ignored.
+        existing = result[existing_index]
+        glosses = [part.strip() for part in existing["gloss"].split(" · ") if part.strip()]
+        if gloss not in glosses:
+            glosses.append(gloss)
+        merged_gloss = " · ".join(glosses)
+        if len(merged_gloss) > 5000:
+            raise ValueError(f"원어 사전 lemma의 통합 뜻이 허용 길이를 초과합니다: {language} · {lemma}")
+        existing["gloss"] = merged_gloss
+        if not existing["transliteration"] and transliteration:
+            existing["transliteration"] = transliteration
     return result
 
 

@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from app.constants import RECOMMENDED_GENERATION_MODELS, recommended_generation_model
 
 from app.core import (
     DB_PATH,
@@ -413,7 +414,7 @@ class NotebookDriveRequest(BaseModel):
     folder: str = Field(default="", max_length=1000)
 
 
-def _select_generation_model(client: LMStudioClient, requested: str = "") -> tuple[str, dict]:
+def _select_generation_model(client: LMStudioClient, requested: str = "", minutes: int = DEFAULT_SERMON_MINUTES) -> tuple[str, dict]:
     catalog = client.model_catalog()
     generation_models = catalog["generation_models"]
     if requested and requested in generation_models:
@@ -421,7 +422,7 @@ def _select_generation_model(client: LMStudioClient, requested: str = "") -> tup
     if requested:
         raise RuntimeError(f"선택한 생성 모델이 LM Studio의 READY 목록에 없습니다: {requested}")
     if catalog["source"] == "openai_compatible" and generation_models:
-        return generation_models[0], catalog
+        return recommended_generation_model(minutes, generation_models), catalog
     if catalog["source"] == "native_model_fallback" and generation_models:
         raise RuntimeError("LM Studio의 /v1/models가 비정상이라 보조 모델목록만 확인했습니다. Loaded Models에서 READY인 생성 모델을 화면에서 직접 선택하세요.")
     raise RuntimeError("LM Studio에서 사용할 수 있는 생성 모델을 찾지 못했습니다.")
@@ -489,7 +490,7 @@ def _preflight_result(data: PreflightRequest) -> dict:
         elif data.model and data.model not in generation:
             add("lmstudio", "LM Studio 생성 모델", "fail", True, f"선택 모델이 READY 목록에 없습니다: {data.model}")
         elif generation:
-            chosen = data.model or generation[0]
+            chosen = data.model or recommended_generation_model(data.minutes, generation)
             client.probe_generation(chosen)
             add("lmstudio", "LM Studio 생성 모델", "pass", True, f"READY · 실제 추론 연결 확인 · {chosen}")
         else:
@@ -832,6 +833,7 @@ def workflow_config():
         "default_minutes": DEFAULT_SERMON_MINUTES,
         "reading_cpm": reading_cpm,
         "target_characters": {str(m): m * reading_cpm for m in SUPPORTED_SERMON_MINUTES},
+        "recommended_generation_models": {str(minutes): list(models) for minutes, models in RECOMMENDED_GENERATION_MODELS.items()},
         "steps": ["brief", "bible", "languages", "draft", "evidence", "review", "final"],
     }
 
@@ -1145,7 +1147,7 @@ def create_outline(data: SermonOutlineRequest, request: Request = None):
     client = LMStudioClient()
     client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
     try:
-        model, _ = _select_generation_model(client, data.model)
+        model, _ = _select_generation_model(client, data.model, data.minutes)
         prompt_study = compact_outline_study(study)
         system, user = build_outline_prompt(data.model_dump(), prompt_study, time_plan)
         prompt_mode = "8K-safe"
@@ -1502,7 +1504,7 @@ def generate_sermon(data: SermonRequest, request: Request = None):
             search_mode=search_mode,
             reading_cpm=reading_cpm,
             clean_outline=clean_outline,
-            select_generation_model=_select_generation_model,
+            select_generation_model=lambda provider, requested: _select_generation_model(provider, requested, data.minutes),
         )
     except (ConnectionError, RuntimeError) as exc:
         raise HTTPException(503, str(exc)) from exc

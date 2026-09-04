@@ -11,14 +11,20 @@ from pathlib import Path
 import re
 import sqlite3
 from html.parser import HTMLParser
+from typing import Protocol
 
 from app.paths import DATA_DIR
 from app.doctrine_backend import DoctrineBackend
 from app.doctrine_backend import create_doctrine_backend
+from app.doctrine_ocr import DoctrineOcrProvider, validate_ocr_result
 
 
 class DoctrineQualityError(ValueError):
     """Raised when extracted content is not safe to index yet."""
+
+
+class DoctrineObjectReader(Protocol):
+    def get_bytes(self, key: str) -> bytes: ...
 
 
 @dataclass(frozen=True)
@@ -96,6 +102,8 @@ def extract_pdf(content: bytes) -> list[DoctrineBlock]:
             text = re.sub(r"\s+", " ", page.extract_text() or "").strip()
             if text:
                 blocks.append(DoctrineBlock(f"페이지 {page_no}", "", "", text))
+        if not blocks:
+            raise DoctrineQualityError("PDF에서 텍스트를 추출하지 못했습니다. 스캔 문서일 수 있어 OCR 검토가 필요합니다.")
         return blocks
     except Exception as exc:
         raise DoctrineQualityError(f"PDF 텍스트 추출에 실패했습니다: {exc}") from exc
@@ -171,7 +179,9 @@ def read_document_for_processing(document_id: int, db_path: Path, backend: Doctr
             return backend.repository.get_document_for_processing(con, int(document_id))
     with closing(sqlite3.connect(db_path)) as con:
         con.row_factory = sqlite3.Row
-        row = con.execute("SELECT id, object_storage_key, mime_type, review_status, active FROM doctrine_documents WHERE id=?",
+        columns = {row[1] for row in con.execute("PRAGMA table_info(doctrine_documents)")}
+        hash_column = "content_hash" if "content_hash" in columns else "'' AS content_hash"
+        row = con.execute(f"SELECT id, object_storage_key, {hash_column}, mime_type, review_status, active FROM doctrine_documents WHERE id=?",
                           (int(document_id),)).fetchone()
     if not row:
         raise ValueError("처리할 교리 문서를 찾지 못했습니다.")
@@ -209,13 +219,28 @@ def write_document_review_state(document_id: int, review_status: str, active: bo
 
 
 def process_doctrine_document(document_id: int, db_path: Path, archive_root: Path = DATA_DIR,
-                              backend: DoctrineBackend | None = None) -> dict:
+                              backend: DoctrineBackend | None = None,
+                              object_store: DoctrineObjectReader | None = None,
+                              object_prefix: str = "",
+                              ocr_provider: DoctrineOcrProvider | None = None) -> dict:
     document = read_document_for_processing(document_id, db_path, backend=backend)
-    path = archive_root / str(document["object_storage_key"]).replace("/", "\\")
+    object_key = str(document["object_storage_key"])
+    path = archive_root / object_key.replace("/", "\\")
     try:
-        raw = path.read_bytes()
+        remote_key = object_prefix.strip("/") + "/" + object_key.lstrip("/") if object_prefix.strip("/") else object_key
+        raw = object_store.get_bytes(remote_key) if object_store is not None else path.read_bytes()
+        expected_hash = str(document.get("content_hash", ""))
+        if expected_hash and hashlib.sha256(raw).hexdigest() != expected_hash:
+            raise DoctrineQualityError("원본 객체 SHA-256이 문서 metadata와 일치하지 않습니다.")
         if document["mime_type"] == "application/pdf":
-            blocks = extract_pdf(raw)
+            try:
+                blocks = extract_pdf(raw)
+            except DoctrineQualityError as exc:
+                if ocr_provider is None or "OCR" not in str(exc):
+                    raise
+                ocr_result = ocr_provider.extract(raw, "application/pdf")
+                validate_ocr_result(ocr_result)
+                blocks = extract_plain_text(ocr_result.text)
         elif document["mime_type"] in {"text/html", "application/xhtml+xml"}:
             blocks = extract_html(raw.decode("utf-8", errors="replace"))
         else:

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from app.paths import DATA_DIR
 from app.repositories.bible import DB_PATH, _connect
+from app.services.original_pronunciation import pronunciation, pronunciation_scheme
 
 
 MORPHGNT_ROOT = DATA_DIR / "bible" / "greek_nt" / "morphgnt" / "raw"
@@ -164,3 +165,54 @@ def import_morphgnt_directory(root: Path = MORPHGNT_ROOT, db_path: Path = DB_PAT
             handle.write(json.dumps({k: v for k, v in item.items() if k != "_warnings"}, ensure_ascii=False) + "\n")
     gap = [f"JHN 8:{verse}" for verse in range(1, 12) if not any(x["book_code"] == "JHN" and x["chapter"] == 8 and x["verse"] == verse for x in all_tokens)]
     return {"files": len(files), "rows": len(all_tokens), "warnings": sorted(warnings), "reports": reports, "batch_id": batch_id, "derived_path": str(derived_path), "john_8_gap": gap}
+
+
+def backfill_greek_pronunciations(db_path: Path = DB_PATH) -> dict:
+    """Derive Greek reading aids from validated MorphGNT surface forms.
+
+    This only populates the existing pronunciation table. SBLGNT/MorphGNT
+    text, lemma, morphology, and source records are never modified.
+    """
+    with _connect(db_path) as con:
+        con.executescript("""
+            CREATE TABLE IF NOT EXISTS original_pronunciations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reference TEXT NOT NULL, language TEXT NOT NULL, lemma TEXT NOT NULL,
+                surface_form TEXT NOT NULL, token_index INTEGER NOT NULL,
+                transliteration TEXT NOT NULL DEFAULT '',
+                pronunciation_scheme TEXT NOT NULL DEFAULT '',
+                pronunciation_source TEXT NOT NULL DEFAULT 'derived from registered surface form',
+                source TEXT NOT NULL DEFAULT '', license_note TEXT NOT NULL DEFAULT '',
+                UNIQUE(source, reference, language, token_index)
+            );
+            CREATE INDEX IF NOT EXISTS idx_original_pronunciation_reference ON original_pronunciations(reference);
+        """)
+        tokens = con.execute(
+            """SELECT book_code, chapter, verse, token_index, text_form, lemma
+               FROM greek_nt_tokens ORDER BY book_code, chapter, verse, token_index"""
+        ).fetchall()
+        rows = []
+        for book_code, chapter, verse, token_index, surface_form, lemma in tokens:
+            rows.append((
+                f"{book_code} {chapter}:{verse}", "grc", str(lemma), str(surface_form), int(token_index),
+                pronunciation(str(surface_form), "grc"), pronunciation_scheme("grc"),
+                MORPHGNT_SOURCE, "MorphGNT source repository · attribution retained; see repository README",
+            ))
+        if rows:
+            con.executemany(
+                """INSERT INTO original_pronunciations
+                   (reference, language, lemma, surface_form, token_index, transliteration,
+                    pronunciation_scheme, source, license_note)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(source, reference, language, token_index) DO UPDATE SET
+                     lemma=excluded.lemma, surface_form=excluded.surface_form,
+                     transliteration=excluded.transliteration,
+                     pronunciation_scheme=excluded.pronunciation_scheme,
+                     license_note=excluded.license_note""",
+                rows,
+            )
+        count = int(con.execute(
+            "SELECT COUNT(*) FROM original_pronunciations WHERE language='grc' AND source=?",
+            (MORPHGNT_SOURCE,),
+        ).fetchone()[0])
+    return {"source": MORPHGNT_SOURCE, "processed_tokens": len(rows), "greek_pronunciation_rows": count}

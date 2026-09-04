@@ -54,6 +54,9 @@ class LocalObjectStore:
     def exists(self, key: str) -> bool:
         return (self.root / key.replace('/', '\\')).is_file()
 
+    def get_bytes(self, key: str) -> bytes:
+        return (self.root / key.replace('/', '\\')).read_bytes()
+
     def verify(self, key: str, sha256: str) -> bool:
         target = self.root / key.replace('/', '\\')
         if not target.is_file():
@@ -146,3 +149,32 @@ class MinioObjectStore:
     def list_keys(self, prefix: str = '') -> list[str]:
         """List object keys for audit purposes; never deletes or mutates objects."""
         return sorted(obj.object_name for obj in self.client.list_objects(self.bucket, prefix=prefix, recursive=True))
+
+    def verify(self, key: str, sha256: str) -> bool:
+        """Verify a remote object's bytes without mutating it."""
+        try:
+            response = self.client.get_object(self.bucket, key)
+            try:
+                payload = response.read()
+            finally:
+                response.close()
+                response.release_conn()
+        except Exception:
+            return False
+        return hashlib.sha256(payload).hexdigest() == sha256
+
+    def exists(self, key: str) -> bool:
+        """Check object existence without downloading or mutating it."""
+        try:
+            self.client.stat_object(self.bucket, key)
+        except Exception:
+            return False
+        return True
+
+    def get_bytes(self, key: str) -> bytes:
+        response = self.client.get_object(self.bucket, key)
+        try:
+            return response.read()
+        finally:
+            response.close()
+            response.release_conn()
