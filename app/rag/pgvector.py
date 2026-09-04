@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 import math
+import os
+
+from app.db_adapter import PostgresAdapter
 
 
 MODEL_DIMENSION = 768
@@ -97,3 +100,16 @@ class PgVectorRagRepository:
                 (literal, model.strip(), literal, limit),
             ).fetchall()
         return [dict(row) for row in rows]
+
+
+def create_pgvector_repository(environ: dict[str, str] | None = None) -> PgVectorRagRepository:
+    """Create an explicit pgvector repository without reusing generic DB URLs.
+
+    A dedicated URL prevents an object-storage or migration-rehearsal database
+    from accidentally becoming the live RAG backend.
+    """
+    env = os.environ if environ is None else environ
+    database_url = env.get("RAG_PGVECTOR_DATABASE_URL", "").strip()
+    if not database_url:
+        raise PgVectorConfigurationError("pgvector RAG에는 RAG_PGVECTOR_DATABASE_URL이 필요합니다.")
+    return PgVectorRagRepository(PostgresAdapter(database_url))

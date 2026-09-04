@@ -15,6 +15,8 @@ SUPPORTED_BACKENDS = ("sqlite", "postgres_pgvector")
 class RagBackendSettings:
     name: str = "sqlite"
     enabled: bool = True
+    pgvector_capability_verified: bool = False
+    fallback_to_sqlite: bool = True
 
     @classmethod
     def from_env(cls, environ: dict[str, str] | None = None) -> "RagBackendSettings":
@@ -23,9 +25,11 @@ class RagBackendSettings:
         if name not in SUPPORTED_BACKENDS:
             raise ValueError(f"지원하지 않는 RAG backend입니다: {name}")
         enabled = env.get("RAG_BACKEND_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
-        if name == "postgres_pgvector" and enabled:
+        verified = env.get("RAG_PGVECTOR_CAPABILITY_VERIFIED", "false").strip().lower() in {"1", "true", "yes", "on"}
+        fallback = env.get("RAG_PGVECTOR_FALLBACK_TO_SQLITE", "true").strip().lower() in {"1", "true", "yes", "on"}
+        if name == "postgres_pgvector" and enabled and not verified:
             raise RuntimeError("PostgreSQL·pgvector는 capability 검증 후에만 활성화할 수 있습니다.")
-        return cls(name=name, enabled=enabled)
+        return cls(name=name, enabled=enabled, pgvector_capability_verified=verified, fallback_to_sqlite=fallback)
 
 
 def compare_ranked_ids(baseline: list[dict], candidate: list[dict], limit: int = 10) -> dict:

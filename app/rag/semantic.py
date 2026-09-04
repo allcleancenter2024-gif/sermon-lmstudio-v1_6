@@ -6,6 +6,8 @@ import json
 import math
 
 from app.repositories.rag import fetch_rag_stats, fetch_rag_vector_rows
+from app.rag.backend import RagBackendSettings
+from app.rag.pgvector import create_pgvector_repository
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -39,13 +41,11 @@ def score_semantic_vector(query_vector, vector, stored_norm) -> float:
     return cosine_similarity(query_vector, vector)
 
 
-def semantic_search(query: str, client, model: str, limit: int = 20, db_path=None) -> list[dict]:
-    """Run the existing full-vector semantic search without owning persistence."""
+def _sqlite_semantic_search(query_vector, model: str, limit: int, db_path=None) -> list[dict]:
     if db_path is None:
         rows = fetch_rag_vector_rows(model)
     else:
         rows = fetch_rag_vector_rows(model, db_path)
-    query_vector = client.embeddings(model, [query])[0]
     scored = []
     for raw in rows:
         item = dict(raw)
@@ -54,3 +54,18 @@ def semantic_search(query: str, client, model: str, limit: int = 20, db_path=Non
         item["semantic_score"] = score_semantic_vector(query_vector, vector, stored_norm)
         scored.append(item)
     return sorted(scored, key=lambda item: item["semantic_score"], reverse=True)[:limit]
+
+
+def semantic_search(query: str, client, model: str, limit: int = 20, db_path=None) -> list[dict]:
+    """Search the selected backend, preserving SQLite as the safe fallback."""
+    query_vector = client.embeddings(model, [query])[0]
+    settings = RagBackendSettings.from_env()
+    if settings.name != "postgres_pgvector" or not settings.enabled:
+        return _sqlite_semantic_search(query_vector, model, limit, db_path)
+    try:
+        repository = create_pgvector_repository()
+        return repository.search(query_vector, model, limit)
+    except Exception:
+        if not settings.fallback_to_sqlite:
+            raise
+        return _sqlite_semantic_search(query_vector, model, limit, db_path)
