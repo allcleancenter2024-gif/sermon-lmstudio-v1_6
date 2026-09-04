@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from app.constants import RECOMMENDED_GENERATION_MODELS, recommended_generation_model
+from app.version import APP_VERSION
 
 from app.core import (
     DB_PATH,
@@ -124,7 +125,6 @@ ROOT = RESOURCE_ROOT
 EXPORTS = EXPORTS_DIR
 init_db()
 
-APP_VERSION = "40.9.10"
 init_notebooklm_db(DB_PATH)
 app = FastAPI(title="성경 근거 설교 작성기 - LM Studio Edition", version=APP_VERSION)
 app.include_router(health_router)

@@ -1,7 +1,12 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-set "EXPECTED_VERSION=40.9.10"
+for /f "usebackq delims=" %%V in ("VERSION.txt") do if not defined EXPECTED_VERSION set "EXPECTED_VERSION=%%V"
+if not defined EXPECTED_VERSION (
+  echo [ERROR] VERSION.txt is missing or empty.
+  pause
+  exit /b 9
+)
 
 echo [1/4] Checking Python virtual environment...
 if not exist ".venv\Scripts\python.exe" (

@@ -3,9 +3,9 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.core import DEFAULT_SERMON_MINUTES, SUPPORTED_SERMON_MINUTES, get_project_meta, get_reading_cpm, list_sermons, project_dashboard, sermon_workflow_status, update_project_meta
+from app.version import APP_VERSION, app_version_major
 
 router = APIRouter()
-APP_VERSION = "40.9.10"
 
 class ProjectMetaRequest(BaseModel):
     service_date: str = Field(default="", max_length=20)
@@ -19,7 +19,7 @@ def projects_dashboard(): return project_dashboard()
 @router.get("/api/workflow/config")
 def workflow_config():
     reading_cpm=get_reading_cpm()
-    return {"version":40,"app_version":APP_VERSION,"minutes":list(SUPPORTED_SERMON_MINUTES),"default_minutes":DEFAULT_SERMON_MINUTES,"reading_cpm":reading_cpm,"target_characters":{str(m):m*reading_cpm for m in SUPPORTED_SERMON_MINUTES},"steps":["brief","bible","languages","draft","evidence","review","final"]}
+    return {"version":app_version_major(),"app_version":APP_VERSION,"minutes":list(SUPPORTED_SERMON_MINUTES),"default_minutes":DEFAULT_SERMON_MINUTES,"reading_cpm":reading_cpm,"target_characters":{str(m):m*reading_cpm for m in SUPPORTED_SERMON_MINUTES},"steps":["brief","bible","languages","draft","evidence","review","final"]}
 
 @router.get("/api/sermons/{sermon_id}/versions/{version}/workflow")
 def version_workflow(sermon_id:int,version:int):

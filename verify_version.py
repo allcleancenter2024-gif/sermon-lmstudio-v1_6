@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 
-from app.main import APP_VERSION
+from app.version import APP_VERSION
 
 
 def verify(expected_version: str) -> int:
