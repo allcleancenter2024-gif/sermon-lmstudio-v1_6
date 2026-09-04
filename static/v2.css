@@ -340,7 +340,7 @@ main>.panel.nav-selected{border-color:#3b8fc8;box-shadow:0 0 0 3px #8ec8ee66,0 1
 .generation-progress-track { height:12px; margin:16px 0 9px; overflow:hidden; border-radius:999px; background:#c8e5f2; }
 .generation-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#55a8d0,#177aa8); transition:width .45s ease; }
 .generation-progress-meta { display:flex; justify-content:space-between; gap:10px; color:#386b80; font-size:12px; font-weight:700; }
-.generation-progress-grid { display:grid; grid-template-columns:1.4fr 0.7fr 1.4fr; gap:9px; margin-top:13px; }
+.generation-progress-grid { display:grid; grid-template-columns:1.35fr 0.7fr 1fr 1.35fr; gap:9px; margin-top:13px; }
 .generation-progress-grid div { min-height:55px; padding:10px 11px; border:1px solid rgba(97,167,199,.28); border-radius:9px; background:rgba(255,255,255,.62); }
 .generation-progress-grid small,.generation-progress-grid b { display:block; }
 .generation-progress-grid small { color:#5b8392; }
@@ -357,7 +357,7 @@ main>.panel.nav-selected{border-color:#3b8fc8;box-shadow:0 0 0 3px #8ec8ee66,0 1
 .outline-progress-track { height:12px; margin:16px 0 9px; overflow:hidden; border-radius:999px; background:#c8e5f2; }
 .outline-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#55a8d0,#177aa8); transition:width .45s ease; }
 .outline-progress-meta { display:flex; justify-content:space-between; gap:10px; color:#386b80; font-size:12px; font-weight:700; }
-.outline-progress-grid { display:grid; grid-template-columns:1.4fr 0.7fr 1.4fr; gap:9px; margin-top:13px; }
+.outline-progress-grid { display:grid; grid-template-columns:1.35fr 0.7fr 1fr 1.35fr; gap:9px; margin-top:13px; }
 .outline-progress-grid div { min-height:55px; padding:10px 11px; border:1px solid rgba(97,167,199,.28); border-radius:9px; background:rgba(255,255,255,.62); }
 .outline-progress-grid small,.outline-progress-grid b { display:block; }
 .outline-progress-grid small { color:#5b8392; }
@@ -371,7 +371,7 @@ main>.panel.nav-selected{border-color:#3b8fc8;box-shadow:0 0 0 3px #8ec8ee66,0 1
 .rag-progress-track { height:12px; margin:16px 0 9px; overflow:hidden; border-radius:999px; background:#c8e5f2; }
 .rag-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#55a8d0,#177aa8); transition:width .45s ease; }
 .rag-progress-meta { display:flex; justify-content:space-between; gap:10px; color:#386b80; font-size:12px; font-weight:700; }
-.rag-progress-grid { display:grid; grid-template-columns:1.4fr 0.7fr 1.4fr; gap:9px; margin-top:13px; }
+.rag-progress-grid { display:grid; grid-template-columns:1.35fr 0.7fr 1fr 1.35fr; gap:9px; margin-top:13px; }
 .rag-progress-grid div { min-height:55px; padding:10px 11px; border:1px solid rgba(97,167,199,.28); border-radius:9px; background:rgba(255,255,255,.62); }
 .rag-progress-grid small,.rag-progress-grid b { display:block; }
 .rag-progress-grid small { color:#5b8392; }

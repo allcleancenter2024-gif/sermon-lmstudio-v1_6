@@ -315,3 +315,15 @@ if($('model'))$('model').addEventListener('change',()=>{if(!window.modelAutoAppl
 if($('minutes'))$('minutes').addEventListener('change',()=>{if(!window.modelManualSelection)applyAutomaticGenerationModel()});
 if($('model'))new MutationObserver(()=>setTimeout(applyAutomaticGenerationModel,0)).observe($('model'),{childList:true});
 fetch('/api/workflow/config',{cache:'no-store'}).then(r=>r.json()).then(d=>{window.runtimeModelPolicy=d.recommended_generation_models||{};applyAutomaticGenerationModel()}).catch(()=>{});
+
+/* 진행률이 단계 기반 추정치일 때도 공통 형식으로 경과시간과 예상 종료시간을 표시한다. */
+const progressClocks={generation:0,outline:0,rag:0};
+function formatProgressEta(kind,percent){const id={generation:'generationProgressEta',outline:'outlineProgressEta',rag:'ragProgressEta'}[kind],node=$(id);if(!node)return;if(percent>=100){node.textContent='완료';return}if(percent<=0||!progressClocks[kind]){node.textContent='계산 중';return}const elapsed=Date.now()-progressClocks[kind],remaining=Math.min(24*60*60*1000,Math.max(0,elapsed*(100-percent)/percent)),eta=new Date(Date.now()+remaining);node.textContent=`약 ${Math.max(1,Math.ceil(remaining/1000))}초 후 · ${eta.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`}
+const baseGenerationProgress=startGenerationProgress,baseRagProgress=startRagProgress,baseOutlineProgress=startOutlineProgress;
+startGenerationProgress=function(model){progressClocks.generation=Date.now();return baseGenerationProgress(model)};
+startRagProgress=function(model){progressClocks.rag=Date.now();return baseRagProgress(model)};
+startOutlineProgress=function(model){progressClocks.outline=Date.now();return baseOutlineProgress(model)};
+const baseSetGenerationProgress=setGenerationProgress,baseSetRagProgress=setRagProgress,baseOutlineProgressSet=outlineProgressSet;
+setGenerationProgress=function(percent,...args){formatProgressEta('generation',Number(percent));return baseSetGenerationProgress(percent,...args)};
+setRagProgress=function(percent,...args){formatProgressEta('rag',Number(percent));return baseSetRagProgress(percent,...args)};
+outlineProgressSet=function(percent,...args){formatProgressEta('outline',Number(percent));return baseOutlineProgressSet(percent,...args)};

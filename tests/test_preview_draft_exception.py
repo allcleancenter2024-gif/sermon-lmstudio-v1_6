@@ -62,5 +62,9 @@ def test_optimization_status_is_visible_in_both_project_panels():
     assert "<b>361</b>" in html
     assert "installGuidePanel" in html
     assert "정상상태 복구" in html
+    assert "generationProgressEta" in html
+    assert "outlineProgressEta" in html
+    assert "ragProgressEta" in html
+    assert "formatProgressEta" in js
     assert "optimizedWorkSummaryMarkdown" in js
     assert "sermon-lmstudio-work-summary-v40.9.10.md" in js
