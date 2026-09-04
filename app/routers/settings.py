@@ -3,9 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core import LMStudioClient, calibrate_reading_cpm, get_lmstudio_url, get_reading_cpm, set_lmstudio_url
-from app.lmstudio_control import find_lms_cli, local_api_port, port_is_open, start_local_server
-from app.github import get_github_repository_url, set_github_repository_url
+from app.application.settings_facade import (
+    LMStudioClient, calibrate_reading_cpm, find_lms_cli, get_github_repository_url,
+    get_lmstudio_url, get_reading_cpm, local_api_port, port_is_open,
+    set_github_repository_url, set_lmstudio_url, set_reading_cpm, start_local_server,
+)
 
 router = APIRouter()
 
