@@ -111,7 +111,7 @@ from app.notebooklm import (
 )
 from app.github import github_readiness
 from app.project_summary import build_project_summary
-from app.services.sermon_service import generate_sermon_workflow
+from app.application.sermon_facade import generate_sermon_workflow
 from app.providers.web import WebEvidenceAdapter, HttpJsonWebSearchProvider, build_web_query, should_search_web, web_grounding_enabled
 from app.providers.lmstudio import cancel_generation
 from app.routers.health import router as health_router
