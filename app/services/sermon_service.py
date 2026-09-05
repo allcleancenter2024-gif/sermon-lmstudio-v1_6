@@ -17,6 +17,7 @@ from app.core import (
     validate_quotes,
 )
 from app.grounding.audit import audit_sermon
+from app.grounding.trace import build_evidence_trace
 from app.media_prompts import build_media_prompt_packet
 
 
@@ -139,6 +140,11 @@ def generate_sermon_workflow(
         citation_analysis=citation_analysis,
         post_generation_quality=post_generation_quality,
     )
+    evidence_trace = build_evidence_trace(
+        sermon,
+        list(passages) + list(word_notes) + list(doctrine_notes)
+        + [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence],
+    )
     result = {
         "sermon": sermon,
         "model": model,
@@ -158,6 +164,10 @@ def generate_sermon_workflow(
         "citation_analysis": citation_analysis,
         "post_generation_quality": post_generation_quality,
         "media_prompts": build_media_prompt_packet(sermon, passages, word_notes, doctrine_notes),
+        "evidence_snapshot": evidence_trace["snapshot"],
+        "sermon_claims": evidence_trace["claims"],
+        "citation_links": evidence_trace["citation_links"],
+        "citation_trace_validation": evidence_trace["validation"],
     }
     if web_grounding_meta and web_grounding_meta.get("enabled"):
         result["web_grounding"] = {**web_grounding_meta, "evidence": [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence]}
