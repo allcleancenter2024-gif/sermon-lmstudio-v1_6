@@ -15,6 +15,7 @@ dist/
 .env.*
 !.env.example
 config/pgvector-prod.env
+config/minio-prod.env
 auth.sqlite3
 data/bible.db
 
