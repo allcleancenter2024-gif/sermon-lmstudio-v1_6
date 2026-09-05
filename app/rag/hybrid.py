@@ -45,6 +45,37 @@ def rrf_fusion(semantic: list[dict], lexical: list[dict], limit: int = 32, k: in
     return ranked
 
 
+def compare_fusion_rankings(
+    baseline: list[dict],
+    candidate: list[dict],
+    *,
+    limit: int = 10,
+    minimum_overlap: float = 0.70,
+) -> dict:
+    """Compare a candidate RRF ranking without changing the active strategy.
+
+    The comparison is deliberately read-only.  A candidate is approved only
+    when its top-k set retains the configured overlap with the legacy result;
+    callers still need an explicit rollout decision before selecting RRF.
+    """
+    top_baseline = [row["id"] for row in baseline[:limit] if "id" in row]
+    top_candidate = [row["id"] for row in candidate[:limit] if "id" in row]
+    baseline_set, candidate_set = set(top_baseline), set(top_candidate)
+    overlap = len(baseline_set & candidate_set) / max(len(baseline_set), 1)
+    return {
+        "limit": limit,
+        "baseline_count": len(top_baseline),
+        "candidate_count": len(top_candidate),
+        "overlap_count": len(baseline_set & candidate_set),
+        "overlap_rate": round(overlap, 4),
+        "order_changed": top_baseline != top_candidate,
+        "minimum_overlap": minimum_overlap,
+        "approved_for_canary": bool(top_baseline) and overlap >= minimum_overlap,
+        "baseline_strategy": "legacy_weighted",
+        "candidate_strategy": "rrf",
+    }
+
+
 def fusion_strategy() -> str:
     value = os.getenv("RAG_FUSION_STRATEGY", "legacy_weighted").strip().lower()
     return value if value in {"legacy_weighted", "rrf"} else "legacy_weighted"

@@ -1,5 +1,6 @@
 import pytest
 from app.rag.fts import fts_search, rebuild_fts_index
+from app.rag.hybrid import compare_fusion_rankings
 from app.core import init_db
 
 from app.rag.backend import RagBackendSettings, compare_ranked_ids
@@ -36,3 +37,13 @@ def test_fts5_index_is_derived_and_tracks_passage_changes(tmp_path):
     assert fts_search("말씀", db_path=db)[0]["reference"] == "JHN 1:1"
     delete_bible_translation("TEST", db)
     assert fts_search("말씀", db_path=db) == []
+
+
+def test_rrf_candidate_requires_overlap_before_canary_approval():
+    baseline = [{"id": 1}, {"id": 2}, {"id": 3}]
+    candidate = [{"id": 3}, {"id": 2}, {"id": 4}]
+    result = compare_fusion_rankings(baseline, candidate, limit=3, minimum_overlap=0.70)
+    assert result["overlap_count"] == 2
+    assert result["overlap_rate"] == 0.6667
+    assert result["order_changed"] is True
+    assert result["approved_for_canary"] is False
