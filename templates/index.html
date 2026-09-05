@@ -15,7 +15,7 @@
     <p>성경 자료를 먼저 찾고, 번역본을 비교한 뒤 그 근거 안에서 15·20·25·30분 설교 초안을 만듭니다.</p>
     <div class="header-actions"><div id="status" class="status checking">LM Studio 연결 확인 중…</div><button id="logoutButton" type="button">로그아웃</button></div>
   </header>
-  <aside id="sideMenu" class="side-menu" aria-label="주요 메뉴"><div class="side-menu-head"><strong>작업 메뉴</strong><button id="toggleSideMenu" type="button" aria-expanded="true" aria-controls="sideMenu" title="좌측 메뉴 접기">‹</button></div><div class="side-menu-body"><span class="side-menu-label">설교 흐름</span><button type="button" data-jump="firstRunPanel">준비상태</button><button type="button" data-jump="requestPanel">설교 입력</button><button type="button" data-jump="researchPanel">본문 연구</button><button type="button" data-jump="outlinePanel">구조·생성</button><button type="button" data-jump="resultPanel">결과·근거</button><button type="button" data-jump="savedPanel">저장·검토</button><span class="side-menu-label secondary">관리</span><button type="button" data-jump="previewPanel">설교문 미리보기</button><button type="button" data-jump="operationsPanel">프로젝트·설정</button><button type="button" data-jump="originalGuidePanel">원어 사용 가이드</button><button type="button" data-jump="readinessPanel">준비진단</button><button type="button" data-jump="changesPanel">변경사항 안내</button><button type="button" data-jump="workSummaryPanel">작업 종합 대시보드</button></div></aside>
+  <aside id="sideMenu" class="side-menu" aria-label="주요 메뉴"><div class="side-menu-head"><strong>작업 메뉴</strong><button id="toggleSideMenu" type="button" aria-expanded="true" aria-controls="sideMenu" title="좌측 메뉴 접기">‹</button></div><div class="side-menu-body"><span class="side-menu-label">전체 구조</span><button type="button" data-jump="architecturePanel">기능 구조 한눈에 보기</button><span class="side-menu-label">설교 흐름</span><button type="button" data-jump="firstRunPanel">준비상태</button><button type="button" data-jump="requestPanel">설교 입력</button><button type="button" data-jump="researchPanel">본문 연구</button><button type="button" data-jump="outlinePanel">구조·생성</button><button type="button" data-jump="resultPanel">결과·근거</button><button type="button" data-jump="savedPanel">저장·검토</button><span class="side-menu-label secondary">관리</span><button type="button" data-jump="previewPanel">설교문 미리보기</button><button type="button" data-jump="operationsPanel">프로젝트·설정</button><button type="button" data-jump="originalGuidePanel">원어 사용 가이드</button><button type="button" data-jump="installGuidePanel">설치및 사용 안내서</button><button type="button" data-jump="readinessPanel">준비진단</button><button type="button" data-jump="changesPanel">변경사항 안내</button><button type="button" data-jump="workSummaryPanel">작업 종합 대시보드</button></div></aside>
 
   <nav class="quick-nav" aria-label="주요 작업 바로가기">
     <div class="quick-nav-inner">
@@ -27,6 +27,7 @@
       <button type="button" data-jump="outlinePanel">3. 구조·생성</button>
       <button type="button" data-jump="resultPanel">4. 결과</button>
       <button type="button" data-jump="savedPanel">5. 저장·검토</button>
+      <button type="button" data-jump="architecturePanel">기능 구조</button>
       <button id="toggleSimpleUi" class="view-toggle" type="button" aria-pressed="true">고급 기능 보기</button>
     </div>
   </nav>
@@ -48,6 +49,23 @@
   </nav>
 
   <main>
+    <section id="architecturePanel" class="panel full architecture-panel" aria-labelledby="architectureTitle">
+      <div class="architecture-hero">
+        <div><p class="eyebrow-dark">SERMON WORKBENCH · MAP</p><h2 id="architectureTitle">설교 작성 기능 구조</h2><p class="notice">지금까지 추가된 기능을 실제 사용 순서에 맞춰 묶었습니다. 필요한 항목을 선택하면 해당 작업 화면으로 이동합니다.</p></div>
+        <div class="architecture-stamp"><strong>6</strong><span>작업 영역</span></div>
+      </div>
+      <div class="architecture-flow" aria-label="설교 작성 전체 흐름"><span>준비</span><i aria-hidden="true">→</i><span>연구</span><i aria-hidden="true">→</i><span>근거</span><i aria-hidden="true">→</i><span>생성</span><i aria-hidden="true">→</i><span>검토</span><i aria-hidden="true">→</i><span>출력·운영</span></div>
+      <div class="architecture-grid">
+        <article class="architecture-card architecture-card-prep"><div class="architecture-card-head"><span class="architecture-index">01</span><div><h3>준비</h3><p>연결·버전·실행 환경</p></div></div><ul><li>LM Studio 연결과 모델 상태</li><li>성경 DB·저장 폴더 준비</li><li>실행 전 준비진단</li></ul><button type="button" data-jump="firstRunPanel">준비상태 열기</button><button type="button" data-jump="readinessPanel">준비진단 열기</button></article>
+        <article class="architecture-card architecture-card-study"><div class="architecture-card-head"><span class="architecture-index">02</span><div><h3>연구</h3><p>본문·번역·원어 자료</p></div></div><ul><li>성경 본문과 번역본 비교</li><li>SBLGNT·OSHB·MorphGNT 조회</li><li>NotebookLM 연구자료 분리</li></ul><button type="button" data-jump="researchPanel">본문 연구 열기</button><button type="button" data-jump="languagePanel">번역·원어 열기</button></article>
+        <article class="architecture-card architecture-card-evidence"><div class="architecture-card-head"><span class="architecture-index">03</span><div><h3>근거</h3><p>검색·출처·검증</p></div></div><ul><li>Evidence Packet과 출처 metadata</li><li>SQLite FTS5·Semantic·Hybrid RAG</li><li>Grounding Audit과 교리 RAG</li></ul><button type="button" data-jump="resultPanel">근거 검증 열기</button><button type="button" data-jump="operationsPanel">RAG 관리 열기</button></article>
+        <article class="architecture-card architecture-card-create"><div class="architecture-card-head"><span class="architecture-index">04</span><div><h3>생성</h3><p>시간·모델·진행상태</p></div></div><ul><li>15·20·25·30분 자동 분량</li><li>모델 자동 선택·수동 선택</li><li>3대지 구조와 경과·예상 종료시간</li></ul><button type="button" data-jump="requestPanel">설교 입력 열기</button><button type="button" data-jump="outlinePanel">구조·생성 열기</button></article>
+        <article class="architecture-card architecture-card-review"><div class="architecture-card-head"><span class="architecture-index">05</span><div><h3>검토</h3><p>품질·수정·승인</p></div></div><ul><li>본문 완전성·인용·품질 검사</li><li>수정본 재감사와 목회자 검토</li><li>승인 전 잠금·다운로드 보호</li></ul><button type="button" data-jump="resultPanel">결과·근거 열기</button><button type="button" data-jump="savedPanel">저장·검토 열기</button></article>
+        <article class="architecture-card architecture-card-operate"><div class="architecture-card-head"><span class="architecture-index">06</span><div><h3>출력·운영</h3><p>보존·안내·복구</p></div></div><ul><li>Markdown·HTML·DOCX·PDF·HWPX</li><li>프로젝트·작업 종합 대시보드</li><li>변경 이력·설치 안내·백업 복구</li></ul><button type="button" data-jump="previewPanel">미리보기 열기</button><button type="button" data-jump="workSummaryPanel">종합 대시보드 열기</button></article>
+      </div>
+      <p class="architecture-note"><b>안전 원칙:</b> 중심본문과 근거 검증을 통과한 자료만 생성에 사용하며, 원어·교리·외부 연구자료는 서로 분리된 출처로 보존합니다. 기존 SQLite·RAG·LM Studio 흐름은 이 구조 안에서 그대로 작동합니다.</p>
+    </section>
+
     <section id="operationsPanel" class="panel full operations-panel optional-panel">
       <div class="section-head"><h2>설교 준비 운영 대시보드</h2><button id="refreshDashboard">대시보드 새로고침</button></div>
       <div id="projectSummary" class="project-summary">프로젝트 상태를 불러오는 중입니다…</div>
