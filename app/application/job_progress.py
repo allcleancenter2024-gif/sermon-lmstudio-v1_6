@@ -10,6 +10,10 @@ from typing import Literal
 
 
 JobStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
+JobStage = Literal[
+    "queued", "researching", "outlining", "generating", "validating",
+    "discerning", "completed", "failed", "cancelled",
+]
 
 
 def _now() -> datetime:
@@ -25,6 +29,12 @@ class JobProgress:
     updated_at: datetime | None = None
     estimated_total_seconds: float | None = None
     message: str = ""
+    current_stage: JobStage = "queued"
+    finished_at: datetime | None = None
+    error_code: str | None = None
+    retry_count: int = 0
+    cancellation_requested: bool = False
+    correlation_id: str = ""
 
     def start(self, now: datetime | None = None) -> "JobProgress":
         if self.status not in {"pending", "running"}:
@@ -32,7 +42,8 @@ class JobProgress:
         current = now or _now()
         return replace(self, status="running", started_at=self.started_at or current, updated_at=current)
 
-    def update(self, percent: int, message: str = "", now: datetime | None = None) -> "JobProgress":
+    def update(self, percent: int, message: str = "", now: datetime | None = None,
+               stage: JobStage | None = None) -> "JobProgress":
         if self.status not in {"running", "pending"}:
             raise ValueError("실행 중인 작업만 진행률을 갱신할 수 있습니다.")
         if not 0 <= int(percent) <= 100:
@@ -48,16 +59,26 @@ class JobProgress:
         if total is None and int(percent) > 0:
             elapsed = max(0.0, (current - started).total_seconds())
             total = elapsed * 100 / int(percent)
-        return replace(self, status="running", percent=int(percent), started_at=started, updated_at=current, estimated_total_seconds=total, message=message)
+        next_stage = stage or ("completed" if int(percent) == 100 else self.current_stage)
+        return replace(self, status="running", percent=int(percent), started_at=started,
+                       updated_at=current, estimated_total_seconds=total, message=message,
+                       current_stage=next_stage)
 
     def finish(self, message: str = "", now: datetime | None = None) -> "JobProgress":
         current = now or _now()
-        return replace(self, status="completed", percent=100, started_at=self.started_at or current, updated_at=current, message=message)
+        return replace(self, status="completed", percent=100, started_at=self.started_at or current,
+                       updated_at=current, finished_at=current, message=message,
+                       current_stage="completed")
 
-    def stop(self, status: Literal["failed", "cancelled"], message: str, now: datetime | None = None) -> "JobProgress":
+    def stop(self, status: Literal["failed", "cancelled"], message: str, now: datetime | None = None,
+             error_code: str | None = None) -> "JobProgress":
         if status not in {"failed", "cancelled"}:
             raise ValueError("stop 상태는 failed 또는 cancelled만 허용됩니다.")
-        return replace(self, status=status, updated_at=now or _now(), message=message)
+        current = now or _now()
+        return replace(self, status=status, updated_at=current, finished_at=current,
+                       message=message, current_stage=status,
+                       error_code=error_code if status == "failed" else None,
+                       cancellation_requested=status == "cancelled")
 
     def estimated_completion(self) -> datetime | None:
         if not self.started_at or not self.estimated_total_seconds or self.status in {"completed", "failed", "cancelled"}:

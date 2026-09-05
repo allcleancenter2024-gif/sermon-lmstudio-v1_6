@@ -1,6 +1,7 @@
 """Small adapters connecting HTTP workflow IDs to the Job Registry."""
 
 from app.application.job_registry import fail_job, finish_job, start_job, update_job
+from app.application.job_progress import JobStage
 
 
 class GenerationJobAdapter:
@@ -19,8 +20,8 @@ class GenerationJobAdapter:
     def complete(self, message: str = ""):
         return finish_job(self.job_id, message)
 
-    def update(self, percent: int, message: str = ""):
-        return update_job(self.job_id, percent, message)
+    def update(self, percent: int, message: str = "", stage: JobStage | None = None):
+        return update_job(self.job_id, percent, message, stage)
 
     def fail(self, message: str = "작업이 실패했습니다."):
         return fail_job(self.job_id, message)

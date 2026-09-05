@@ -1,4 +1,4 @@
-from app.application.job_registry import cancel_job, clear_jobs, fail_job, finish_job, get_job, start_job, update_job
+from app.application.job_registry import cancel_job, clear_jobs, fail_job, finish_job, get_job, retry_job, start_job, update_job
 
 
 def setup_function():
@@ -28,3 +28,13 @@ def test_registry_distinguishes_progress_and_failure():
     assert update_job("failed-generation", 40, "근거 준비").percent == 40
     assert fail_job("failed-generation", "모델 오류").status == "failed"
     assert get_job("failed-generation").estimated_completion() is None
+
+
+def test_registry_retries_only_failed_jobs_and_tracks_attempt_count():
+    start_job("retryable")
+    assert retry_job("retryable") is None
+    fail_job("retryable", "모델 오류", error_code="MODEL_UNAVAILABLE")
+    retried = retry_job("retryable")
+    assert retried.status == "running"
+    assert retried.retry_count == 1
+    assert retry_job("retryable") is None
