@@ -7,6 +7,7 @@ without moving database schema or breaking legacy app.main imports.
 
 from datetime import datetime
 
+from app.paths import RESOURCE_ROOT
 from app.core import (
     DEFAULT_SERMON_MINUTES,
     SUPPORTED_SERMON_MINUTES,
@@ -18,6 +19,7 @@ from app.core import (
     update_project_meta,
 )
 from app.version import APP_VERSION, app_version_major
+from app.project_summary import build_project_summary
 
 
 class ProjectValidationError(ValueError):
@@ -26,6 +28,11 @@ class ProjectValidationError(ValueError):
 
 def dashboard() -> dict:
     return project_dashboard()
+
+
+def summary() -> dict:
+    """Return the legacy project summary through the project boundary."""
+    return build_project_summary(RESOURCE_ROOT, APP_VERSION)
 
 
 def workflow_config() -> dict:

@@ -1,10 +1,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from app.application.project_facade import ProjectValidationError, dashboard, detail, save_detail, workflow, workflow_config as project_workflow_config
-from app.paths import RESOURCE_ROOT
-from app.project_summary import build_project_summary
-from app.version import APP_VERSION
+from app.application.project_facade import ProjectValidationError, dashboard, detail, save_detail, summary, workflow, workflow_config as project_workflow_config
 
 router = APIRouter()
 
@@ -18,7 +15,7 @@ class ProjectMetaRequest(BaseModel):
 def projects_dashboard(): return dashboard()
 
 @router.get("/api/project-summary")
-def project_summary(): return build_project_summary(RESOURCE_ROOT, APP_VERSION)
+def project_summary(): return summary()
 
 @router.get("/api/workflow/config")
 def workflow_config(): return project_workflow_config()
