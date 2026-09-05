@@ -10,6 +10,10 @@ from datetime import date
 from typing import Any
 
 
+def _version_id(kind: str, code: str, version: int) -> str:
+    return f"{kind}:{code}:v{version}"
+
+
 @dataclass(frozen=True)
 class DenominationProfile:
     code: str
@@ -21,6 +25,10 @@ class DenominationProfile:
     disputed_topics: tuple[str, ...] = ()
     validation_rules: tuple[str, ...] = ()
     source_refs: tuple[str, ...] = ()
+
+    @property
+    def version_id(self) -> str:
+        return _version_id("denomination", self.code, self.version)
 
 
 @dataclass(frozen=True)
@@ -34,6 +42,10 @@ class AudienceProfile:
     sensitive_topics: tuple[str, ...] = ()
     target_minutes: tuple[int, ...] = ()
 
+    @property
+    def version_id(self) -> str:
+        return _version_id("audience", self.code, self.version)
+
 
 @dataclass(frozen=True)
 class SermonFormatProfile:
@@ -44,6 +56,10 @@ class SermonFormatProfile:
     required_sections: tuple[str, ...] = ()
     optional_sections: tuple[str, ...] = ()
 
+    @property
+    def version_id(self) -> str:
+        return _version_id("format", self.code, self.version)
+
 
 @dataclass(frozen=True)
 class ProfileSelection:
@@ -51,6 +67,54 @@ class ProfileSelection:
     audience: AudienceProfile
     sermon_format: SermonFormatProfile
     warnings: tuple[str, ...] = field(default_factory=tuple)
+
+    @property
+    def profile_version_id(self) -> dict[str, str]:
+        """Stable identifiers persisted with a sermon version.
+
+        A profile edit must increment its version to produce a new identifier;
+        this keeps old approved sermons reproducible without a new DB table.
+        """
+        return {
+            "denomination": self.denomination.version_id,
+            "audience": self.audience.version_id,
+            "sermon_format": self.sermon_format.version_id,
+        }
+
+    def snapshot(self) -> dict[str, object]:
+        """Return an immutable-at-save-time copy for historical reproduction."""
+        return {
+            "profile_version_id": dict(self.profile_version_id),
+            "denomination": {
+                "code": self.denomination.code,
+                "label": self.denomination.label,
+                "version": self.denomination.version,
+                "effective_date": self.denomination.effective_date.isoformat(),
+                "primary_authorities": list(self.denomination.primary_authorities),
+                "emphases": list(self.denomination.emphases),
+                "disputed_topics": list(self.denomination.disputed_topics),
+                "validation_rules": list(self.denomination.validation_rules),
+                "source_refs": list(self.denomination.source_refs),
+            },
+            "audience": {
+                "code": self.audience.code,
+                "label": self.audience.label,
+                "version": self.audience.version,
+                "effective_date": self.audience.effective_date.isoformat(),
+                "language_level": self.audience.language_level,
+                "application_domains": list(self.audience.application_domains),
+                "sensitive_topics": list(self.audience.sensitive_topics),
+                "target_minutes": list(self.audience.target_minutes),
+            },
+            "sermon_format": {
+                "code": self.sermon_format.code,
+                "label": self.sermon_format.label,
+                "version": self.sermon_format.version,
+                "effective_date": self.sermon_format.effective_date.isoformat(),
+                "required_sections": list(self.sermon_format.required_sections),
+                "optional_sections": list(self.sermon_format.optional_sections),
+            },
+        }
 
 
 def select_profiles(

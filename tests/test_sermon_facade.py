@@ -12,4 +12,6 @@ def test_sermon_facade_delegates_to_grounded_generation_service(monkeypatch):
     result = sermon_facade.generate_sermon_workflow("request", client="client")
 
     assert result["audit_id"] == "audit-1"
+    assert result["profile_version_id"]["sermon_format"] == "format:expository:v1"
+    assert result["profile_snapshot"]["audience"]["code"] == "전 연령"
     assert calls == [(('request',), {"client": "client"})]

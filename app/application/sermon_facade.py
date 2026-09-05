@@ -15,10 +15,13 @@ def generate_sermon_workflow(*args, **kwargs):
     selection = select_request_profiles(data) if data is not None else None
     result = sermon_service.generate_sermon_workflow(*args, **kwargs)
     if selection is not None and isinstance(result, dict):
+        snapshot = selection.snapshot()
         result["profiles"] = {
             "denomination": selection.denomination.code,
             "audience": selection.audience.code,
             "sermon_format": selection.sermon_format.code,
             "warnings": list(selection.warnings),
         }
+        result["profile_version_id"] = snapshot["profile_version_id"]
+        result["profile_snapshot"] = snapshot
     return result

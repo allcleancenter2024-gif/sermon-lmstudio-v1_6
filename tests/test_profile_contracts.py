@@ -43,3 +43,16 @@ def test_request_profile_adapter_reuses_existing_request_fields_without_persiste
     assert selected.denomination.code == "초교파 복음주의"
     assert selected.audience.code == "청년"
     assert selected.sermon_format.code == "expository"
+
+
+def test_profile_versions_are_stable_and_snapshot_is_reproducible():
+    selected = select_profiles(*_profiles())
+    assert selected.profile_version_id == {
+        "denomination": "denomination:presbyterian_reformed_kr:v1",
+        "audience": "audience:adult:v1",
+        "sermon_format": "format:expository:v1",
+    }
+    snapshot = selected.snapshot()
+    assert snapshot["profile_version_id"] == selected.profile_version_id
+    assert snapshot["denomination"]["source_refs"] == ["doctrine:denominations"]
+    assert snapshot["audience"]["target_minutes"] == [20, 30]
