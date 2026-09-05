@@ -13,7 +13,7 @@
   <header>
     <p class="eyebrow">LM STUDIO · LOCAL AI · <span id="runtimeVersion">V40 확인 중</span></p>
     <h1>성경 근거 설교 작성기</h1>
-    <p>성경 자료를 먼저 찾고, 번역본을 비교한 뒤 그 근거 안에서 15·20·25·30분 설교 초안을 만듭니다.</p>
+    <p>성경 자료를 먼저 찾고, 번역본을 비교한 뒤 그 근거 안에서 15·20·25·30·40분 설교 초안을 만듭니다.</p>
     <div class="header-actions"><div id="status" class="status checking">LM Studio 연결 확인 중…</div><button id="logoutButton" type="button">로그아웃</button></div>
   </header>
   <aside id="sideMenu" class="side-menu" aria-label="주요 메뉴"><div class="side-menu-head"><strong>작업 메뉴</strong><button id="toggleSideMenu" type="button" aria-expanded="true" aria-controls="sideMenu" title="좌측 메뉴 접기">‹</button></div><div class="side-menu-body"><span class="side-menu-label">전체 구조</span><button type="button" data-jump="architecturePanel">기능 구조 한눈에 보기</button><span class="side-menu-label">설교 흐름</span><button type="button" data-jump="firstRunPanel">준비상태</button><button type="button" data-jump="requestPanel">설교 입력</button><button type="button" data-jump="researchPanel">본문 연구</button><button type="button" data-jump="outlinePanel">구조·생성</button><button type="button" data-jump="resultPanel">결과·근거</button><button type="button" data-jump="savedPanel">저장·검토</button><span class="side-menu-label secondary">관리</span><button type="button" data-jump="previewPanel">설교문 미리보기</button><button type="button" data-jump="operationsPanel">프로젝트·설정</button><button type="button" data-jump="originalGuidePanel">원어 사용 가이드</button><button type="button" data-jump="installGuidePanel">설치및 사용 안내서</button><button type="button" data-jump="readinessPanel">준비진단</button><button type="button" data-jump="changesPanel">변경사항 안내</button><button type="button" data-jump="workSummaryPanel">작업 종합 대시보드</button></div></aside>
@@ -60,7 +60,7 @@
         <article class="architecture-card architecture-card-prep"><div class="architecture-card-head"><span class="architecture-index">01</span><div><h3>준비</h3><p>연결·버전·실행 환경</p></div></div><ul><li>LM Studio 연결과 모델 상태</li><li>성경 DB·저장 폴더 준비</li><li>실행 전 준비진단</li></ul><button type="button" data-jump="firstRunPanel">준비상태 열기</button><button type="button" data-jump="readinessPanel">준비진단 열기</button></article>
         <article class="architecture-card architecture-card-study"><div class="architecture-card-head"><span class="architecture-index">02</span><div><h3>연구</h3><p>본문·번역·원어 자료</p></div></div><ul><li>성경 본문과 번역본 비교</li><li>SBLGNT·OSHB·MorphGNT 조회</li><li>NotebookLM 연구자료 분리</li></ul><button type="button" data-jump="researchPanel">본문 연구 열기</button><button type="button" data-jump="languagePanel">번역·원어 열기</button></article>
         <article class="architecture-card architecture-card-evidence"><div class="architecture-card-head"><span class="architecture-index">03</span><div><h3>근거</h3><p>검색·출처·검증</p></div></div><ul><li>Evidence Packet과 출처 metadata</li><li>SQLite FTS5·Semantic·Hybrid RAG</li><li>Grounding Audit과 교리 RAG</li></ul><button type="button" data-jump="resultPanel">근거 검증 열기</button><button type="button" data-jump="operationsPanel">RAG 관리 열기</button></article>
-        <article class="architecture-card architecture-card-create"><div class="architecture-card-head"><span class="architecture-index">04</span><div><h3>생성</h3><p>시간·모델·진행상태</p></div></div><ul><li>15·20·25·30분 자동 분량</li><li>모델 자동 선택·수동 선택</li><li>3대지 구조와 경과·예상 종료시간</li></ul><button type="button" data-jump="requestPanel">설교 입력 열기</button><button type="button" data-jump="outlinePanel">구조·생성 열기</button></article>
+      <article class="architecture-card architecture-card-create"><div class="architecture-card-head"><span class="architecture-index">04</span><div><h3>생성</h3><p>시간·모델·진행상태</p></div></div><ul><li>15·20·25·30·40분 자동 분량</li><li>모델 자동 선택·수동 선택</li><li>3대지 구조와 경과·예상 종료시간</li></ul><button type="button" data-jump="requestPanel">설교 입력 열기</button><button type="button" data-jump="outlinePanel">구조·생성 열기</button></article>
         <article class="architecture-card architecture-card-review"><div class="architecture-card-head"><span class="architecture-index">05</span><div><h3>검토</h3><p>품질·수정·승인</p></div></div><ul><li>본문 완전성·인용·품질 검사</li><li>수정본 재감사와 목회자 검토</li><li>승인 전 잠금·다운로드 보호</li></ul><button type="button" data-jump="resultPanel">결과·근거 열기</button><button type="button" data-jump="savedPanel">저장·검토 열기</button></article>
         <article class="architecture-card architecture-card-operate"><div class="architecture-card-head"><span class="architecture-index">06</span><div><h3>출력·운영</h3><p>보존·안내·복구</p></div></div><ul><li>Markdown·HTML·DOCX·PDF·HWPX</li><li>프로젝트·작업 종합 대시보드</li><li>변경 이력·설치 안내·백업 복구</li></ul><button type="button" data-jump="previewPanel">미리보기 열기</button><button type="button" data-jump="workSummaryPanel">종합 대시보드 열기</button></article>
       </div>
@@ -180,15 +180,21 @@ scripts/   복구 도구</pre></article><article class="guide-card"><div class="
         <div><small>최종 잠금</small><strong id="wizardProjectLocked">-</strong></div>
         <p id="wizardProjectHint">저장된 설교 프로젝트 상태를 불러오는 중입니다.</p>
       </div>
+      <div class="wizard-navigation" aria-label="설교 단계 이동">
+        <button id="wizardPrevious" type="button">이전 단계</button>
+        <button id="wizardSaveDraft" type="button">현재 입력 저장</button>
+        <button id="wizardNext" type="button">다음 단계</button>
+      </div>
     </section>
 
     <section id="requestPanel" class="panel full form-panel">
+      <div id="draftStatus" class="workflow-save-state" role="status" aria-live="polite">입력 내용은 이 브라우저 탭에 임시 저장됩니다.</div>
       <h2>1. 설교 요청</h2>
       <label>설교 주제<input id="topic" placeholder="예: 두려움 속에서도 함께하시는 하나님"></label>
       <label>세부사항<textarea id="details" rows="5" placeholder="예: 경제적 어려움과 불안 가운데 하나님을 신뢰하는 믿음"></textarea></label>
       <div class="grid">
         <label>중심본문<input id="reference" placeholder="예: 이사야 41:10"></label>
-        <label>설교 시간<select id="minutes"><option value="15" selected>15분</option><option value="20">20분</option><option value="25">25분</option><option value="30">30분</option></select><small id="minutesHint" class="field-hint">기본 15분 · 서버 설정 확인 중</small></label>
+        <label>설교 시간<select id="minutes"><option value="15" selected>15분</option><option value="20">20분</option><option value="25">25분</option><option value="30">30분</option><option value="40">40분</option></select><small id="minutesHint" class="field-hint">기본 15분 · 서버 설정 확인 중</small></label>
         <label>청중<select id="audience"><option>전 연령</option><option>청년</option><option>장년</option><option>노년</option></select></label>
         <label>신학적 전통<select id="tradition"><option>초교파 복음주의</option><option>장로교</option><option>감리교</option><option>침례교</option><option>성결교</option></select></label>
         <label>교단 코드(선택)<input id="denominationCode" maxlength="40" placeholder="예: PRESBYTERIAN"><small>승인된 V2 교단 문서가 있을 때만 사용합니다.</small></label>
@@ -433,7 +439,7 @@ scripts/   복구 도구</pre></article><article class="guide-card"><div class="
         <div class="generation-progress-grid"><div><small>현재 작업</small><b id="generationProgressSummary">LM Studio와 생성 환경을 확인합니다.</b></div><div><small>생성 경과</small><b id="generationProgressElapsed">0초</b></div><div><small>예상 종료시간(추정)</small><b id="generationProgressEta">계산 중</b></div><div><small>처리 상태</small><b id="generationProgressDetail">요청을 준비 중입니다.</b></div></div>
         <p class="generation-progress-note">진행률은 LM Studio가 토큰별 완료율을 제공하지 않는 현재 API 구조에서 단계와 경과 시간을 바탕으로 한 추정치입니다. 실제 생성 내용은 완료 후 표시됩니다.</p>
       </section>
-      <p class="notice">목회자 검토 전 초안입니다. 15·20·25·30분 중 선택한 시간과 등록된 성경 근거를 유지하도록 제한합니다.</p>
+      <p class="notice">목회자 검토 전 초안입니다. 15·20·25·30·40분 중 선택한 시간과 등록된 성경 근거를 유지하도록 제한합니다.</p>
     </section>
 
     <section id="resultPanel" class="panel full">

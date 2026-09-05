@@ -69,8 +69,8 @@ def select_profiles(
             raise ValueError("프로필 적용일은 미래 날짜일 수 없습니다.")
 
     warnings: list[str] = []
-    if audience.target_minutes and not set(audience.target_minutes).intersection({15, 20, 25, 30}):
-        warnings.append("현재 지원되는 설교 시간(15·20·25·30분)과 일치하는 대상 시간이 없습니다.")
+    if audience.target_minutes and not set(audience.target_minutes).intersection({15, 20, 25, 30, 40}):
+        warnings.append("현재 지원되는 설교 시간(15·20·25·30·40분)과 일치하는 대상 시간이 없습니다.")
     return ProfileSelection(denomination, audience, sermon_format, tuple(warnings))
 
 

@@ -399,9 +399,8 @@ class CoreTests(unittest.TestCase):
             self.assertTrue({"sermon.md", "dashboard.html", "sermon.docx", "study_note.md", "sermon_outline.json", "manifest.json"}.issubset(names))
 
     def test_v10_fifteen_minutes_is_an_official_api_duration(self):
-        self.assertEqual(SUPPORTED_SERMON_MINUTES, (15, 20, 25, 30))
-        with self.assertRaises(ValueError):
-            sermon_time_plan(40)
+        self.assertEqual(SUPPORTED_SERMON_MINUTES, (15, 20, 25, 30, 40))
+        self.assertEqual(sermon_time_plan(40)["target_minutes"], 40)
         self.assertEqual(DEFAULT_SERMON_MINUTES, 15)
         rows = search_passages("테스트", db_path=self.db)
         _, prompt = build_sermon_prompt({"topic": "평안", "minutes": 15, "reading_cpm": 300}, rows)

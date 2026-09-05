@@ -14,7 +14,7 @@ class V37FirstRunWizardTests(unittest.TestCase):
         self.assertEqual(config["version"], 40)
         self.assertEqual(config["app_version"], APP_VERSION)
         self.assertEqual(config["default_minutes"], 15)
-        self.assertEqual(config["minutes"], [15, 20, 25, 30])
+        self.assertEqual(config["minutes"], [15, 20, 25, 30, 40])
 
     def test_first_run_wizard_has_single_next_action(self):
         html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
@@ -22,6 +22,19 @@ class V37FirstRunWizardTests(unittest.TestCase):
         self.assertIn('id="firstRunNext"', html)
         self.assertIn('id="firstRunRefresh"', html)
         self.assertIn("RAG·PDF·원어 사전은 보완 기능", html)
+
+    def test_workflow_has_recoverable_navigation_and_forty_minute_option(self):
+        html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('<option value="40">40분</option>', html)
+        self.assertIn('id="wizardPrevious"', html)
+        self.assertIn('id="wizardSaveDraft"', html)
+        self.assertIn('id="wizardNext"', html)
+        self.assertIn('id="draftStatus"', html)
+        self.assertIn("sessionStorage", js)
+        self.assertIn("beforeunload", js)
+        self.assertIn("function restoreWorkflowDraft()", js)
+        self.assertIn("function moveWorkflow(delta)", js)
 
     def test_wizard_reuses_health_state_and_requires_openai_compatible_generation(self):
         js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
