@@ -20,6 +20,13 @@ class V50OutlineProgressUiTests(unittest.TestCase):
         self.assertIn("def create_outline(data: SermonOutlineRequest, request: Request = None)", main)
         self.assertIn("client.begin_generation(request.headers.get(\"X-Generation-Id\", \"\") if request else \"\")", main)
 
+    def test_workflow_rail_buttons_use_the_shared_panel_navigation_and_current_state(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("#workflowRailSteps button[data-target]", script)
+        self.assertIn("revealAndScroll(button.dataset.target)", script)
+        self.assertIn("button.setAttribute('aria-current','step')", script)
+
 
 if __name__ == "__main__":
     unittest.main()
