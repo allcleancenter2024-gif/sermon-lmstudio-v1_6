@@ -5,6 +5,7 @@ from app.auth import is_admin, session_user
 from app.application import doctrine_facade
 from app.application.doctrine_facade import DB_PATH
 from app.paths import USER_ROOT
+from app.kmc_reference import build_kmc_final_checklist, build_kmc_operational_report, compare_kmc_reference_metadata, kmc_reference_review_gate, list_kmc_reference_check_logs, probe_kmc_reference_headers, record_kmc_review_decisions
 
 router=APIRouter()
 class DoctrineChunkRequest(BaseModel):
@@ -32,6 +33,10 @@ class DoctrineSearchRequest(BaseModel):
     limit: int = Field(default=6, ge=1, le=50)
     include_common: bool = True
 
+class KmcReviewDecisionRequest(BaseModel):
+    decision: str = Field(pattern="^(ACKNOWLEDGED|REJECTED)$")
+    comment: str = Field(default="", max_length=2000)
+
 def _require_admin(request: Request) -> str:
     username = session_user(request.cookies.get("sermon_session"))
     if not is_admin(USER_ROOT / "auth.sqlite3", username):
@@ -46,6 +51,39 @@ def create_doctrine(data:DoctrineChunkRequest, request: Request):
 def list_indexable_doctrine(request: Request):
     _require_admin(request)
     return {"items": doctrine_facade.indexable_chunks(DB_PATH)}
+
+@router.get("/api/doctrine/kmc/reference-comparison")
+def compare_kmc_references():
+    return compare_kmc_reference_metadata(DB_PATH)
+
+@router.post("/api/doctrine/kmc/reference-check")
+def check_kmc_references():
+    return probe_kmc_reference_headers(DB_PATH)
+
+@router.get("/api/admin/doctrine/kmc/check-logs")
+def list_kmc_check_logs(request: Request, limit: int = 30):
+    _require_admin(request)
+    return {"items": list_kmc_reference_check_logs(DB_PATH, limit)}
+
+@router.get("/api/admin/doctrine/kmc/review-gate")
+def get_kmc_review_gate(request: Request):
+    _require_admin(request)
+    return kmc_reference_review_gate(DB_PATH)
+
+@router.get("/api/admin/doctrine/kmc/operational-report")
+def get_kmc_operational_report(request: Request):
+    _require_admin(request)
+    return build_kmc_operational_report(DB_PATH)
+
+@router.post("/api/admin/doctrine/kmc/review-decisions")
+def record_kmc_review(data: KmcReviewDecisionRequest, request: Request):
+    actor = _require_admin(request)
+    return record_kmc_review_decisions(DB_PATH, actor, data.decision, data.comment)
+
+@router.get("/api/admin/doctrine/kmc/final-checklist")
+def get_kmc_final_checklist(request: Request):
+    _require_admin(request)
+    return build_kmc_final_checklist(DB_PATH)
 
 @router.post("/api/admin/doctrine/sources/{source_id}/license-review")
 def review_doctrine_license(source_id: int, data: DoctrineLicenseReviewRequest, request: Request):

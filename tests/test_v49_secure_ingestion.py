@@ -1,6 +1,6 @@
 import unittest
 
-from app.denomination_doctrine import download_official_source, validate_resolved_host
+from app.denomination_doctrine import LICENSE_BLOCKED, download_official_source, validate_resolved_host
 
 
 class Response304:
@@ -17,6 +17,9 @@ class Opener304:
 
 
 class SecureIngestionTests(unittest.TestCase):
+    def test_restricted_license_is_an_explicit_blocked_state(self):
+        self.assertIn('RESTRICTED', LICENSE_BLOCKED)
+
     def test_private_dns_result_is_rejected(self):
         def resolver(*args, **kwargs):
             return [(None, None, None, None, ('10.0.0.5', 443))]

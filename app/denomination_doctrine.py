@@ -27,7 +27,7 @@ OFFICIAL_HOST_ALLOWLIST = {
     "kmc.or.kr", "www.kmc.or.kr", "www.prok.org", "prok.org", "pcaac.org",
     "www.pcaac.org", "opc.org", "bfm.sbc.net", "sbc.net", "ag.org", "umc.org",
 }
-LICENSE_BLOCKED = {"UNKNOWN", "PERMISSION_REQUIRED", "BLOCKED"}
+LICENSE_BLOCKED = {"UNKNOWN", "PERMISSION_REQUIRED", "RESTRICTED", "BLOCKED"}
 MAX_REDIRECTS = 3
 
 

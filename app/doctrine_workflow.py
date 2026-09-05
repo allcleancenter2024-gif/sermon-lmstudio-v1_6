@@ -44,7 +44,7 @@ def transition_document(document_id: int, to_status: str, actor: str, comment: s
             if not chunk_count:
                 raise ValueError("청크가 없는 문서는 승인할 수 없습니다.")
             source = con.execute("SELECT license_status,active FROM doctrine_sources WHERE id=?", (int(row["source_id"]),)).fetchone()
-            if not source or not source["active"] or source["license_status"] in {"UNKNOWN", "PERMISSION_REQUIRED", "BLOCKED"}:
+            if not source or not source["active"] or source["license_status"] in {"UNKNOWN", "PERMISSION_REQUIRED", "RESTRICTED", "BLOCKED"}:
                 raise ValueError("활성 자료원이 아니거나 라이선스 확인 전인 문서는 승인할 수 없습니다.")
         active = 1 if to_status in {"APPROVED", "INDEXED"} else 0
         con.execute("UPDATE doctrine_documents SET review_status=?, active=?, reviewed_by=?, reviewed_at=?, review_comment=? WHERE id=?", (to_status, active, actor, _now(), comment[:2000], int(document_id)))

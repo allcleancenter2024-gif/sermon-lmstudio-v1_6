@@ -50,6 +50,20 @@
   </nav>
 
   <main>
+    <section id="workspacePanel" class="panel full workspace-panel" aria-labelledby="workspaceTitle">
+      <div class="workspace-hero">
+        <div>
+          <p class="eyebrow-dark">PASTOR WORKSPACE · START HERE</p>
+          <h2 id="workspaceTitle">성경에 근거한 설교 작성</h2>
+          <p class="notice">주제와 중심본문을 입력하면 자료 확인부터 근거 검증, 생성, 목회자 검토까지 필요한 순서를 안내합니다.</p>
+        </div>
+        <button type="button" class="workspace-start" data-jump="requestPanel">설교 작성 시작</button>
+      </div>
+      <div id="workspaceStatus" class="workspace-status" role="status">현재 준비 상태를 확인하고 있습니다…</div>
+      <div id="workspaceCards" class="workspace-cards" aria-label="설교 작성 준비 상태"></div>
+      <div class="workspace-rule"><b>근거 우선 원칙</b><span>성경 본문 확인 → 등록 자료 연구 → 근거 품질 검사 → 설교 생성 → 목회자 검토·잠금</span></div>
+    </section>
+
     <section id="architecturePanel" class="panel full architecture-panel" aria-labelledby="architectureTitle">
       <div class="architecture-hero">
         <div><p class="eyebrow-dark">SERMON WORKBENCH · MAP</p><h2 id="architectureTitle">설교 작성 기능 구조</h2><p class="notice">지금까지 추가된 기능을 실제 사용 순서에 맞춰 묶었습니다. 필요한 항목을 선택하면 해당 작업 화면으로 이동합니다.</p></div>
@@ -81,6 +95,9 @@
         <div id="doctrineAdminSummary" class="guide-summary"><div><b>확인 중</b><small>관리자 권한</small></div><div><b>확인 중</b><small>색인 대기 청크</small></div><div><b>확인 중</b><small>승인 문서</small></div><div><b>V2 격리</b><small>기존 RAG 보존</small></div></div>
         <div class="history-row"><label>라이선스 검토 대상 자료원 ID<input id="doctrineLicenseSourceId" type="number" min="1" placeholder="예: 1"></label><label>라이선스 상태<select id="doctrineLicenseStatus"><option value="PERMISSION_REQUIRED">허가 필요</option><option value="VERIFIED">허가 확인</option><option value="BLOCKED">차단</option></select></label><label>증빙 번호/메모<input id="doctrinePermissionRef" placeholder="허가 번호 또는 확인 근거"></label><button id="reviewDoctrineLicense" type="button">라이선스 검토 저장</button></div>
         <div class="history-row"><label>임베딩 모델<input id="doctrineIndexModel" placeholder="LM Studio 임베딩 모델명"></label><button id="reindexApprovedDoctrine" type="button">승인 자료 재색인</button></div>
+        <div class="history-row"><button id="compareKmcReferences" type="button">KMC 2021·2025 메타데이터 비교</button><button id="checkKmcReferences" type="button">공식 URL 변경 확인</button><button id="loadKmcReferenceLogs" type="button">최근 점검 이력</button><button id="loadKmcReviewGate" type="button">검토 게이트 확인</button><button id="recordKmcReview" type="button">검토 결과 기록</button><button id="loadKmcOperationalReport" type="button">운영 보고서 확인</button><button id="loadKmcFinalChecklist" type="button">최종 체크리스트</button></div>
+        <div id="kmcReferenceComparison" class="import-preset-info" aria-live="polite">원문을 읽거나 다운로드하지 않고 공식 자료원 목록·권한·활성 상태만 비교합니다. 정기 점검은 <code>scripts/check_kmc_reference.ps1</code>를 작업 스케줄러에 명시적으로 등록한 경우에만 실행됩니다.</div>
+        <div id="kmcReferenceLogs" class="grounding-details" aria-live="polite"></div>
         <div id="doctrineAdminStatus" class="import-status">관리자 로그인 후 상태를 조회합니다.</div>
       </div>
     </section>
@@ -129,6 +146,7 @@ scripts/   복구 도구</pre></article><article class="guide-card"><div class="
       <div class="changes-hero"><div><p class="eyebrow-dark">RELEASE NOTES · VERSION HISTORY</p><h2 id="changesTitle">변경사항 안내</h2><p class="notice">현재 설치된 프로그램의 업데이트 결과를 버전별로 한눈에 확인합니다.</p></div><span class="changes-current">V__APP_VERSION__<br><small>현재 버전</small></span></div>
       <div id="changesGrid" class="changes-grid">
         <article class="change-card current"><div class="change-card-head"><span>40.9.10</span><b>최적화 완료</b></div><h3>인쇄·HWPX·원어 자료 흐름 통합</h3><ul><li>인쇄 전용 문서 루트로 빈 인쇄 미리보기 문제를 구조적으로 해결했습니다.</li><li>승인·무결성 확인된 최종 잠금본만 HWPX 한글파일로 다운로드할 수 있습니다.</li><li>SBLGNT·MorphGNT·본문비평·Alignment 자료와 원어 자료 간편 등록 흐름을 정리했습니다.</li><li>전체 회귀 테스트 409건 통과, 19건은 외부 통합 플래그 미설정으로 건너뛰었으며 Windows 실행·임시 폴더 권한 대응을 확인했습니다.</li></ul></article>
+        <article class="change-card"><div class="change-card-head"><span>KMC Reference</span><b>운영 안전</b></div><h3>공식 자료원 변경 감지·검토 게이트</h3><ul><li>KMC 공식 URL은 HEAD 메타데이터만 확인하며 원문 본문은 읽지 않습니다.</li><li>변경·오류 자료원은 관리자 검토 필요 상태로 중단합니다.</li><li>자동 다운로드·OCR·MinIO·임베딩·RAG 색인은 차단 상태를 유지합니다.</li><li>상세 점검 이력은 관리 메뉴의 교단 교리 RAG 관리에서 확인합니다.</li></ul></article>
         <article class="change-card"><div class="change-card-head"><span>40.9.9</span><b>안전성</b></div><h3>생성·검토·출력 보호</h3><ul><li>초안은 검토 전용으로 유지하고 승인·잠금 전 다운로드·인쇄를 차단합니다.</li><li>수동 수정본은 별도 버전으로 저장하고 다시 감사하도록 구성했습니다.</li><li>LM Studio 추론 취소와 로컬 Provider 장애의 기능 단위 처리를 유지합니다.</li></ul></article>
         <article class="change-card"><div class="change-card-head"><span>40.9.3</span><b>UI 안정화</b></div><h3>로그인·긴 화면 탐색</h3><ul><li>로그인·로그아웃 흐름과 세션 보호를 정리했습니다.</li><li>빠른 이동, 간편 화면, 맨 위로 이동을 추가했습니다.</li></ul></article>
         <article class="change-card"><div class="change-card-head"><span>40.9.x</span><b>기능 모듈화</b></div><h3>저장·근거·검색 구조</h3><ul><li>Settings, Project, Doctrine, Bible, Sermon Repository를 단계적으로 분리했습니다.</li><li>RAG, Evidence 정규화, Grounding Audit·Dashboard·Export를 통합했습니다.</li></ul></article>
@@ -141,9 +159,9 @@ scripts/   복구 도구</pre></article><article class="guide-card"><div class="
       <div class="work-summary-head"><div><p class="eyebrow-dark">SERMON LM STUDIO · PROJECT SUMMARY</p><h2 id="workSummaryTitle">Sermon LM Studio 작업 종합 대시보드</h2><p class="notice">Phase 0부터 현재까지의 구조 개선, 원어 자료, 생성 보호, 미리보기·출력 기능을 한 화면에서 확인합니다.</p></div><div class="work-summary-actions"><button id="workSummaryMarkdown" type="button">Markdown 저장</button><button id="workSummaryHtml" type="button">HTML 저장</button><button id="workSummaryPrint" type="button">PDF / 인쇄</button></div></div>
       <div class="work-summary-hero"><div><strong>현재 판정</strong><p id="workSummaryVerdict">최적화 완료 · 검증 통과</p><small id="workSummarySummary">인쇄 전용 출력 루트, 승인 잠금 HWPX, 원어 자료 등록, 기존 기능 호환성을 확인했습니다.</small></div><span id="workSummaryVersion">V__APP_VERSION__</span></div>
       <p class="optimization-complete-banner">[2026-09-04 운영 안정화 작업 완료] 현재 적용된 기능과 정상상태 복구 절차를 반영했습니다.</p>
-      <div class="work-summary-stats"><div><b id="workSummaryCommitCount">-</b><small>최근 Git 커밋</small></div><div><b id="workSummaryChangedState">-</b><small>작업 트리 상태</small></div><div><b id="workSummaryChangedFiles">-</b><small>최신 변경 파일</small></div><div><b>361</b><small>전체 pytest 통과</small></div></div>
+      <div class="work-summary-stats"><div><b id="workSummaryCommitCount">-</b><small>최근 Git 커밋</small></div><div><b id="workSummaryChangedState">-</b><small>작업 트리 상태</small></div><div><b id="workSummaryChangedFiles">-</b><small>최신 변경 파일</small></div><div><b>441</b><small>전체 pytest 통과</small></div></div>
       <h3>최근 작업 자동 요약</h3><div id="workSummaryRecent" class="work-summary-table"><div class="work-summary-row"><span>Git 이력</span><span>불러오는 중</span><em>확인 중</em><span>최근 변경사항을 자동으로 읽고 있습니다.</span></div></div>
-      <div class="work-summary-columns"><article><h3>완료된 최적화</h3><ul><li>설교 작성 7단계 흐름·완료 상태 UI</li><li>SBLGNT·MorphGNT·Apparatus·Alignment 조회</li><li>초안 예외 미리보기·수동 수정본 재감사</li><li>인쇄 전용 문서와 HWPX 한글파일 출력</li><li>265개 전체 회귀 테스트 통과</li></ul></article><article><h3>안전·호환성 유지</h3><ul><li>기존 API URL·응답 형식 유지</li><li>SQLite schema·기존 데이터 보존</li><li>성경 중심본문·Evidence 검증 유지</li><li>LM Studio localhost Provider 유지</li><li>Web Grounding 기본값 OFF</li></ul></article></div>
+      <div class="work-summary-columns"><article><h3>완료된 최적화</h3><ul><li>설교 작성 7단계 흐름·완료 상태 UI</li><li>SBLGNT·MorphGNT·Apparatus·Alignment 조회</li><li>초안 예외 미리보기·수동 수정본 재감사</li><li>인쇄 전용 문서와 HWPX 한글파일 출력</li><li>265개 전체 회귀 테스트 통과</li></ul></article><article><h3>안전·호환성 유지</h3><ul><li>기존 API URL·응답 형식 유지</li><li>SQLite schema·기존 데이터 보존</li><li>성경 중심본문·Evidence 검증 유지</li><li>LM Studio localhost Provider 유지</li><li>Web Grounding 기본값 OFF</li></ul></article><article><h3>KMC 운영 상태</h3><ul><li>공식 URL Reference-only</li><li>HEAD 메타데이터 기준선 저장</li><li>변경·오류 시 관리자 검토 게이트</li><li>원문 자동 처리·색인 차단</li></ul><p class="notice">상세 상태는 관리 메뉴의 교단 교리 RAG 관리에서 확인합니다.</p></article></div>
       <p class="work-summary-footnote">PDF 버튼은 브라우저 인쇄 대화상자를 열어 “PDF로 저장”을 지원합니다. 모든 내보내기는 현재 화면의 요약 정보만 사용하며 원문·개인정보를 외부로 전송하지 않습니다.</p>
     </section>
 
@@ -448,6 +466,11 @@ scripts/   복구 도구</pre></article><article class="guide-card"><div class="
       <div id="meta" class="meta">아직 생성된 설교문이 없습니다.</div>
       <div id="auditBox" class="audit-box neutral">감사 기록은 설교 생성 후 표시됩니다.</div>
       <section id="groundingDashboard" class="grounding-dashboard" aria-live="polite"><h3>근거 검증 요약</h3><div id="groundingSummary">검증 사용 안 함</div><div id="groundingDetails" class="grounding-details"></div></section>
+      <section id="kmcReferenceStatus" class="grounding-dashboard" aria-live="polite" hidden>
+        <h3>KMC 공식 자료원 참조 상태</h3>
+        <div id="kmcReferenceSummary"></div>
+        <div id="kmcReferenceDetails" class="grounding-details"></div>
+      </section>
       <div class="quality-box"><h3>V40 생성후 통합 품질검사</h3><div id="qualitySummary" class="meta">설교 생성 후 성경·원어·교리·번역문·분량 검사가 표시됩니다.</div><div id="qualityChecks" class="quality-checks"></div><div id="qualityIssues" class="quality-issues"></div></div>
       <details class="citation-box" open><summary>문장별 성경 근거 연결 · Citation Mapping</summary><div id="citationSummary">설교 생성 후 근거 연결 결과가 표시됩니다.</div><div id="citationResults" class="citation-results"></div></details>
       <article id="output" class="output"></article>

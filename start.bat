@@ -1,6 +1,11 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+rem Load the ignored production-candidate RAG settings without echoing secrets.
+rem SQLite fallback remains enabled in config\pgvector-prod.env.
+if exist "config\pgvector-prod.env" (
+  for /f "usebackq eol=# tokens=1,* delims==" %%A in ("config\pgvector-prod.env") do if not "%%A"=="" if not "%%B"=="" set "%%A=%%B"
+)
 for /f "usebackq delims=" %%V in ("VERSION.txt") do if not defined EXPECTED_VERSION set "EXPECTED_VERSION=%%V"
 if not defined EXPECTED_VERSION (
   echo [ERROR] VERSION.txt is missing or empty.

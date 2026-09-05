@@ -59,7 +59,9 @@ def test_optimization_status_is_visible_in_both_project_panels():
     js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
 
     assert "[2026-09-04 운영 안정화 작업 완료]" in html
-    assert "<b>361</b>" in html
+    assert "<b>441</b>" in html
+    assert 'id="workspacePanel"' in html
+    assert 'id="workspaceCards"' in html
     assert "installGuidePanel" in html
     assert "정상상태 복구" in html
     assert "generationProgressEta" in html

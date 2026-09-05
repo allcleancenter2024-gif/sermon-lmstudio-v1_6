@@ -57,6 +57,7 @@ from app.constants import (
 )
 from app.services.original_pronunciation import pronunciation, pronunciation_scheme
 from app.migrations import apply_admin_workflow_migration, apply_license_review_migration, apply_migrations, apply_phase1_data_model_migration, apply_phase2_ingestion_migration
+from app.kmc_reference import fetch_kmc_reference_sources
 
 
 @contextmanager
@@ -722,6 +723,7 @@ def build_research_packet(
     doctrine_notes: list[dict] | None = None,
     db_path: Path = DB_PATH,
     tradition: str = "",
+    denomination_code: str = "",
 ) -> dict:
     """Create the single evidence packet used by preview and sermon generation.
 
@@ -731,6 +733,7 @@ def build_research_packet(
     reference = reference.strip()
     search_results = list(search_results or [])
     doctrine_notes = list(doctrine_notes or [])
+    reference_sources = fetch_kmc_reference_sources(db_path) if denomination_code.strip().upper() == "KMC" else []
     study = build_passage_study(reference, search_results, db_path) if reference else {
         "reference": "", "translations": [], "original_notes": [], "context": [],
         "related": search_results, "warnings": [],
@@ -869,6 +872,7 @@ def build_research_packet(
         "bible_sources": bible_sources,
         "original_notes": list(study.get("original_notes") or []),
         "doctrine_sources": doctrine_notes,
+        "reference_sources": reference_sources,
         "translation_matrix": translation_matrix,
         "complete_translations": complete_translations,
         "original_risk_flags": original_risk_flags,

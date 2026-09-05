@@ -16,7 +16,10 @@ from app.db_adapter import PostgresAdapter
 
 
 MODEL_DIMENSION = 768
-HNSW_EF_SEARCH = 200
+# The 31k-row production corpus needs a wider candidate set to keep the
+# pgvector rank stable against the SQLite semantic baseline.  This remains a
+# transaction-local setting and does not change the index or stored vectors.
+HNSW_EF_SEARCH = 1000
 PGVECTOR_CONNECT_TIMEOUT_SECONDS = 1
 
 

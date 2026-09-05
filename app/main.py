@@ -470,7 +470,8 @@ def _collect_research_packet(data, client: LMStudioClient) -> dict:
         except (ConnectionError, RuntimeError, ValueError):
             doctrine_notes = []
             doctrine_search_mode = "교리 검색 오류(근거 제외)"
-    packet = build_research_packet(normalized_reference, search_results, doctrine_notes, tradition=data.tradition)
+    packet = build_research_packet(normalized_reference, search_results, doctrine_notes, tradition=data.tradition,
+                                   denomination_code=getattr(data, "denomination_code", ""))
     packet["search_mode"] = search_mode
     packet["embedding_model"] = data.embedding_model
     packet["tradition"] = data.tradition
