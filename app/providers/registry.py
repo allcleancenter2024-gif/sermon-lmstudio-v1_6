@@ -12,10 +12,12 @@ class ProviderSpec:
     label: str
     local_only: bool
     enabled: bool
+    capabilities: tuple[str, ...] = ()
 
 
 PROVIDER_SPECS = (
-    ProviderSpec("lmstudio", "LM Studio", True, True),
+    ProviderSpec("lmstudio", "LM Studio", True, True,
+                 ("streaming", "cancellation", "reasoning_suppressed", "embeddings")),
 )
 
 

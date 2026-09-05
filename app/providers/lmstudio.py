@@ -182,6 +182,16 @@ class LMStudioClient:
             "warnings": warnings,
         }
 
+    def capabilities(self) -> dict[str, bool]:
+        """Describe supported operations for routing and UI diagnostics."""
+        return {
+            "local_only": True,
+            "streaming": True,
+            "cancellation": True,
+            "reasoning_suppressed": True,
+            "embeddings": True,
+        }
+
     def models(self) -> list[str]:
         return self.model_catalog()["models"]
 
