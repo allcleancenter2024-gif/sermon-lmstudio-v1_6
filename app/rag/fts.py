@@ -1,4 +1,4 @@
-"""Optional SQLite FTS5 lexical strategy; legacy LIKE search remains default."""
+"""Optional SQLite FTS5 lexical strategy with a safe legacy fallback."""
 from __future__ import annotations
 
 import os
@@ -46,6 +46,39 @@ def ensure_fts_table(db_path: Path = DB_PATH) -> bool:
         con.execute(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS {FTS_TABLE} USING fts5(source_id UNINDEXED, reference, text, source_name)"
         )
+        # Keep the derived index synchronized without changing the source table
+        # or introducing a second persistence model. Existing databases receive
+        # these triggers lazily the first time FTS5 is requested.
+        con.executescript(
+            f"""
+            CREATE TRIGGER IF NOT EXISTS trg_{FTS_TABLE}_insert
+            AFTER INSERT ON passages
+            BEGIN
+                INSERT INTO {FTS_TABLE}(source_id, reference, text, source_name)
+                VALUES (NEW.id, NEW.reference, NEW.text, NEW.translation);
+            END;
+            CREATE TRIGGER IF NOT EXISTS trg_{FTS_TABLE}_update
+            AFTER UPDATE OF translation, reference, text ON passages
+            BEGIN
+                DELETE FROM {FTS_TABLE} WHERE source_id = OLD.id;
+                INSERT INTO {FTS_TABLE}(source_id, reference, text, source_name)
+                VALUES (NEW.id, NEW.reference, NEW.text, NEW.translation);
+            END;
+            CREATE TRIGGER IF NOT EXISTS trg_{FTS_TABLE}_delete
+            AFTER DELETE ON passages
+            BEGIN
+                DELETE FROM {FTS_TABLE} WHERE source_id = OLD.id;
+            END;
+            """
+        )
+        source_count = con.execute("SELECT COUNT(*) FROM passages").fetchone()[0]
+        index_count = con.execute(f"SELECT COUNT(*) FROM {FTS_TABLE}").fetchone()[0]
+        if source_count != index_count:
+            con.execute(f"DELETE FROM {FTS_TABLE}")
+            con.executemany(
+                f"INSERT INTO {FTS_TABLE}(source_id, reference, text, source_name) VALUES (?, ?, ?, ?)",
+                con.execute("SELECT id, reference, text, translation FROM passages ORDER BY id").fetchall(),
+            )
     return True
 
 
