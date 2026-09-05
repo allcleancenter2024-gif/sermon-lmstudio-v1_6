@@ -1,4 +1,4 @@
-from app.application.job_registry import cancel_job, clear_jobs, finish_job, get_job, start_job
+from app.application.job_registry import cancel_job, clear_jobs, fail_job, finish_job, get_job, start_job, update_job
 
 
 def setup_function():
@@ -21,3 +21,10 @@ def test_registry_tracks_cancellation_without_persistent_storage():
 def test_empty_job_id_is_ignored():
     assert start_job("") is None
     assert get_job("") is None
+
+
+def test_registry_distinguishes_progress_and_failure():
+    start_job("failed-generation")
+    assert update_job("failed-generation", 40, "근거 준비").percent == 40
+    assert fail_job("failed-generation", "모델 오류").status == "failed"
+    assert get_job("failed-generation").estimated_completion() is None

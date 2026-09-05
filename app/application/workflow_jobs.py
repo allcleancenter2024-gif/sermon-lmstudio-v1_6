@@ -1,6 +1,6 @@
 """Small adapters connecting HTTP workflow IDs to the Job Registry."""
 
-from app.application.job_registry import finish_job, start_job
+from app.application.job_registry import fail_job, finish_job, start_job, update_job
 
 
 class GenerationJobAdapter:
@@ -18,3 +18,13 @@ class GenerationJobAdapter:
 
     def complete(self, message: str = ""):
         return finish_job(self.job_id, message)
+
+    def update(self, percent: int, message: str = ""):
+        return update_job(self.job_id, percent, message)
+
+    def fail(self, message: str = "작업이 실패했습니다."):
+        return fail_job(self.job_id, message)
+
+    def abort(self, message: str = "작업이 사전 검증에서 중단되었습니다."):
+        """Record a preflight failure before the main generation try block."""
+        return self.fail(message)

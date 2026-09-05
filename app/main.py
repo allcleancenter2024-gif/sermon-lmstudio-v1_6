@@ -1164,8 +1164,11 @@ def create_outline(data: SermonOutlineRequest, request: Request = None):
     client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
     job = GenerationJobAdapter.from_request(request, "outline")
     job.start()
+    completed = False
     try:
+        job.update(10, "중심본문 근거를 확인했습니다.")
         model, _ = _select_generation_model(client, data.model, data.minutes)
+        job.update(25, "생성 모델을 확인했습니다.")
         prompt_study = compact_outline_study(study)
         system, user = build_outline_prompt(data.model_dump(), prompt_study, time_plan)
         prompt_mode = "8K-safe"
@@ -1180,13 +1183,18 @@ def create_outline(data: SermonOutlineRequest, request: Request = None):
             prompt_mode = "8K-emergency"
         parsed = _parse_json_response(raw_outline)
         outline = validate_sermon_outline(parsed, evidence)
+        job.update(90, "3대지 구조 검증을 완료했습니다.")
+        completed = True
     except ValueError as exc:
         raise HTTPException(422, f"설교 구조 검증 실패: {exc}") from exc
     except (ConnectionError, RuntimeError) as exc:
         raise HTTPException(503, str(exc)) from exc
     finally:
         client.end_generation()
-        job.complete("아웃라인 생성 요청이 종료되었습니다.")
+        if completed:
+            job.complete("아웃라인 생성 요청이 종료되었습니다.")
+        else:
+            job.fail("아웃라인 생성 요청이 오류로 중단되었습니다.")
     return {
         "outline": outline, "time_plan": time_plan, "model": model,
         "reference": normalized_reference, "study_counts": study.get("counts", {}),
@@ -1464,13 +1472,19 @@ def generate_sermon(data: SermonRequest, request: Request = None):
     client.begin_generation(request.headers.get("X-Generation-Id", "") if request else "")
     job = GenerationJobAdapter.from_request(request, "sermon")
     job.start()
+    completed = False
     reading_cpm = data.reading_cpm or get_reading_cpm()
     if data.main_reference:
+        job.update(12, "중심본문 근거를 확인했습니다.")
         packet = _collect_research_packet(data, client)
         if not packet["readiness"]["generation_ready"]:
             missing = ", ".join(packet.get("missing_main_references") or [])
             if missing:
+                client.end_generation()
+                job.abort("중심본문 근거가 부족해 설교 생성을 시작하지 못했습니다.")
                 raise HTTPException(400, f"중심본문 전체가 DB에 등록되어야 설교를 생성할 수 있습니다. 누락: {missing}")
+            client.end_generation()
+            job.abort("중심본문 범위의 연속 근거가 부족해 설교 생성을 시작하지 못했습니다.")
             raise HTTPException(400, "범위 중심본문은 최소 한 번역/자료가 요청 범위 전체를 연속해서 제공해야 설교를 생성할 수 있습니다.")
         passages = list(packet["bible_sources"])
         word_notes = list(packet["original_notes"])
@@ -1510,11 +1524,14 @@ def generate_sermon(data: SermonRequest, request: Request = None):
         try:
             clean_outline = validate_sermon_outline(data.outline, passages)
         except ValueError as exc:
+            client.end_generation()
+            job.abort(f"설교 구조 근거 검증 실패: {exc}")
             raise HTTPException(400, f"설교 구조 근거 검증 실패: {exc}") from exc
     if packet is not None:
         packet["bible_sources"] = list(passages)
         packet["counts"]["bible_sources"] = len(passages)
     try:
+        job.update(45, "설교 생성에 사용할 근거를 준비했습니다.")
         result = generate_sermon_workflow(
             data,
             client=client,
@@ -1528,11 +1545,16 @@ def generate_sermon(data: SermonRequest, request: Request = None):
             clean_outline=clean_outline,
             select_generation_model=lambda provider, requested: _select_generation_model(provider, requested, data.minutes),
         )
+        job.update(90, "설교문 품질과 근거 검사를 완료했습니다.")
+        completed = True
     except (ConnectionError, RuntimeError) as exc:
         raise HTTPException(503, str(exc)) from exc
     finally:
         client.end_generation()
-        job.complete("설교 생성 요청이 종료되었습니다.")
+        if completed:
+            job.complete("설교 생성 요청이 종료되었습니다.")
+        else:
+            job.fail("설교 생성 요청이 오류로 중단되었습니다.")
     result["research_packet"] = packet
     return result
 
