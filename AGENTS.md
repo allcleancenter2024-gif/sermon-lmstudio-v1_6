@@ -1,18 +1,19 @@
 # AGENTS.md
-# Sermon LM Studio V40.9.1 안전 리팩터링 규칙
+# Sermon LM Studio V40.9.15 안전 리팩터링 규칙
 
 ## 1. 프로젝트 목적
 
 이 프로젝트는 LM Studio 기반의 로컬 성경 근거 설교 작성기이다.
 
 현재 기준 버전:
-- 제품 내부 버전: V40.9.1
+- 제품 내부 버전: V40.9.15
 - 원본 폴더명: sermon-lmstudio-v1_6
 - 운영 환경: Windows 10/11
 - 주요 AI Provider: LM Studio
 - 기본 LM Studio API: http://127.0.0.1:12345/v1
 - 주 데이터베이스: SQLite
-- 현재 자동 테스트 기준선: 212 passed
+- 현재 자동 테스트 기준선: 599 passed, 19 skipped (2026-10-11)
+- 최종 프로그램 구조와 단일 기준은 FINAL_PROGRAM_BASELINE.md
 
 이 프로젝트에서 가장 중요한 목표는 새로운 기능 추가가 아니라,
 현재 정상 기능을 보존하면서 구조적 복잡성을 줄이는 것이다.
@@ -51,7 +52,7 @@
 기준선은 반드시 다음이어야 한다.
 
 ```text
-212 passed
+599 passed, 19 skipped
 ```
 
 기준선 테스트가 실패하면 리팩터링을 시작하지 말고
@@ -279,13 +280,13 @@ Phase 종료 후 전체 테스트 실행.
 전체 테스트가 다음보다 나빠지면 Phase 완료 금지.
 
 ```text
-212 passed
+599 passed, 19 skipped
 ```
 
 새 테스트가 추가된 경우:
 
 ```text
-212 + 추가 테스트 passed
+599 + 추가 테스트 passed, 19 skipped (같은 통합 조건)
 ```
 
 이어야 한다.

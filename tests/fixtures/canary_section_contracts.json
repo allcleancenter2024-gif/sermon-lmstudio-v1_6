@@ -1,0 +1,11 @@
+{
+  "context": {"reference": "fixture-ref-1", "audience": "fixture-audience"},
+  "evidence": {"source_ids": ["source-1"], "citation_coverage": 1.0, "license_coverage": 1.0},
+  "sections": [
+    "structure",
+    "original_language_keywords",
+    "verse_commentary",
+    "sermon_form_guide",
+    "research_book"
+  ]
+}

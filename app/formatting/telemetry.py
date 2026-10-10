@@ -16,9 +16,14 @@ def record_event(event: str, *, format: str | None = None, profile: str | None =
     safe_code = error_code if error_code in ERROR_CODES else None
     data = {"render_id": uuid.uuid4().hex, "event": event, "format": format, "profile": profile, "theme": theme, "preset": preset, "duration_ms": duration_ms, "output_size": output_size, "status": status, "error_code": safe_code, "quality_score": quality_score, "timestamp": int(time.time())}
     path = USER_ROOT / "data" / "page_format_telemetry.jsonl"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(data, ensure_ascii=False) + "\n")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(data, ensure_ascii=False) + "\n")
+    except OSError:
+        # Telemetry is observational only. A read-only or ACL-protected data
+        # directory must not make the requested document render fail.
+        pass
     return data
 
 

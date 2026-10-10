@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-from app.core import DB_PATH, DEFAULT_SERMON_MINUTES, SUPPORTED_SERMON_MINUTES, LMStudioClient, db_stats, get_lmstudio_url, rag_stats
+from app.core import DB_PATH, DEFAULT_SERMON_MINUTES, SUPPORTED_SERMON_MINUTES, LMStudioClient, db_stats, rag_stats
+from app.config import get_lmstudio_url
 from app.version import APP_VERSION
 
 router = APIRouter()

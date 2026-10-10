@@ -18,8 +18,15 @@ def pytest_configure(config) -> None:
     # inherit an ACL from an elevated run and make normal pytest invocations
     # fail while scanning pytest's numbered temporary directories.
     parent = Path(config.rootpath) / ".test-runs"
-    parent.mkdir(parents=True, exist_ok=True)
-    temp_root = Path(tempfile.mkdtemp(prefix="pytest-", dir=parent))
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        temp_root = Path(tempfile.mkdtemp(prefix="pytest-", dir=parent))
+    except PermissionError:
+        # A previous elevated run can leave the project-local directory with
+        # an ACL that blocks the current user. Keep the project-local path as
+        # the preferred location, but do not prevent pytest from reaching the
+        # actual test suite when that location is unavailable.
+        temp_root = Path(tempfile.mkdtemp(prefix="sermon-pytest-"))
     os.environ["TMP"] = str(temp_root)
     os.environ["TEMP"] = str(temp_root)
     tempfile.tempdir = str(temp_root)

@@ -8,11 +8,21 @@ from difflib import unified_diff
 import json
 import sqlite3
 from pathlib import Path
+from typing import Any, TypedDict
 
 from app.paths import DATA_DIR
 
 
 DB_PATH = DATA_DIR / "bible.db"
+
+
+class ProjectDashboardInput(TypedDict):
+    """Prepared repository input consumed by the dashboard presenter."""
+
+    sermon: dict[str, Any]
+    version: int
+    version_item: dict[str, Any]
+    project: dict[str, Any]
 
 
 @contextmanager
@@ -140,9 +150,9 @@ def compare_sermon_versions(sermon_id: int, a: int, b: int, db_path: Path = DB_P
     return "\n".join(unified_diff(versions[a].splitlines(), versions[b].splitlines(), fromfile=f"v{a}", tofile=f"v{b}", lineterm=""))
 
 
-def fetch_project_dashboard_inputs(db_path: Path = DB_PATH) -> list[dict]:
+def fetch_project_dashboard_inputs(db_path: Path = DB_PATH) -> list[ProjectDashboardInput]:
     """Fetch dashboard base rows; workflow state remains a core responsibility."""
-    inputs = []
+    inputs: list[ProjectDashboardInput] = []
     for sermon in list_sermons(db_path):
         sermon_id = int(sermon["id"])
         version = int(sermon["latest_version"])

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>최종완성 프로그램 보충 보고서 · V40.9.15</title>
+<style>
+:root{--ink:#152b3d;--muted:#566d7f;--paper:#f4f7f8;--white:#fff;--line:#d4e0e5;--blue:#1b5774;--blue2:#dcecf2;--green:#14735d;--gold:#856222;--warn:#fff6e3}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Segoe UI","Malgun Gothic",sans-serif}a{color:#155777;text-underline-offset:3px}a:focus-visible{outline:3px solid #bd8428;outline-offset:3px}.wrap{width:min(1120px,calc(100% - 36px));margin:auto}
+.hero{background:#12334b;color:#fff;padding:44px 0 38px;border-bottom:6px solid #4b96a4}.hero p{max-width:760px;color:#d2e3eb}.hero h1{font-size:clamp(2rem,5vw,3.25rem);line-height:1.15;margin:10px 0 8px}.hero small{color:#a9c8d2}.nav{background:#fff;border-bottom:1px solid var(--line)}.nav .wrap{display:flex;gap:8px;overflow:auto;padding:11px 0}.nav a{white-space:nowrap;border:1px solid var(--line);border-radius:4px;padding:5px 11px;text-decoration:none;font-size:.88rem}.main{padding:28px 0 56px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);border-block:1px solid var(--line);background:var(--white)}.metric{padding:16px 18px;border-right:1px solid var(--line)}.metric:last-child{border:0}.metric strong{display:block;font-size:1.45rem;color:var(--blue)}.metric span{color:var(--muted);font-size:.85rem}
+section{scroll-margin-top:16px;margin-top:30px}h2{font-size:1.45rem;color:var(--blue);margin:0 0 12px}h3{font-size:1.08rem;margin:0 0 7px}.panel{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.links{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.button{display:inline-flex;background:var(--blue);color:#fff;padding:9px 13px;border-radius:5px;text-decoration:none;font-weight:700}.button.secondary{background:var(--blue2);color:var(--blue)}.tag{display:inline-block;border:1px solid #9dbcc7;background:#edf6f7;color:#1d5967;padding:2px 9px;border-radius:99px;font-size:.8rem;font-weight:700}.path{font-family:Consolas,monospace;overflow-wrap:anywhere;color:#435c6e;font-size:.85rem}.muted{color:var(--muted)}.rule{padding:13px 15px;border-left:4px solid var(--green);background:#edf7f4}.caution{padding:13px 15px;border-left:4px solid #ba872a;background:var(--warn)}.row{padding:13px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.row p{margin:4px 0 0;color:var(--muted)}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:11px 12px;border-bottom:1px solid var(--line)}th{background:#eaf1f4;color:#173e54}tr:last-child td{border:0}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:white}.footer{border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:.86rem}
+@media(max-width:760px){.metrics{grid-template-columns:1fr 1fr}.metric:nth-child(2){border-right:0}.metric:nth-child(-n+2){border-bottom:1px solid var(--line)}.grid{grid-template-columns:1fr}.panel{padding:16px}th,td{min-width:130px}}
+@media(max-width:440px){.wrap{width:calc(100% - 22px)}.hero{padding:34px 0 30px}.metric{padding:12px}.metric strong{font-size:1.2rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap"><small>SERMON LM STUDIO · VERSION 40.9.15 · 2026-10-11</small><h1>최종 프로그램<br>보충·UI 통합 보고서</h1><p>최근 프로젝트에 추가된 계정·연구·협업 흐름을 코드와 기존 화면에 대조했습니다. 이미 있는 상세 기능은 재구성하지 않고, 종합 대시보드의 빠진 설명만 덧붙였습니다.</p><span class="tag">기존 작업 흐름 유지 · 요약 화면 보강</span></div></header>
+<nav class="nav" aria-label="보고서 목차"><div class="wrap"><a href="#release">최종 산출물</a><a href="#analysis">추가 내용 분석</a><a href="#layout">UI 반영</a><a href="#verify">검증</a><a href="#baseline">향후 기준</a></div></nav>
+<main class="wrap main">
+<div class="metrics" aria-label="릴리스 주요 수치"><div class="metric"><strong>V40.9.15</strong><span>단일 제품 버전</span></div><div class="metric"><strong>599 passed</strong><span>19 skipped · 7 subtests passed</span></div><div class="metric"><strong>2 × 2</strong><span>데스크톱 요약 카드 배치</span></div><div class="metric"><strong>SQLite</strong><span>성경·설교 DB 변경 없음</span></div></div>
+<section id="release"><h2>최종 실행 산출물</h2><div class="panel"><p>V40.9.15 실행 파일과 BAT는 이전 버전 산출물과 분리된 릴리스 폴더에 있습니다.</p><div class="links"><a class="button" href="release/V40.9.15/SermonLMStudio_V40.9.15.exe">Windows 실행 파일</a><a class="button secondary" href="release/V40.9.15/RUN_SermonLMStudio.bat">Windows 실행 BAT</a><a class="button secondary" href="FINAL_PROGRAM_BASELINE.md">기준 문서</a></div><p class="path">release/V40.9.15/SermonLMStudio_V40.9.15.exe</p><p class="path">SHA-256 · DF0D38D762CDAF1EF7702FE9FA276BA500033E7CF9C049847A22740DAB25FC4F</p><div class="rule"><strong>실행:</strong> LM Studio 로컬 서버를 먼저 켜고 BAT를 실행합니다. 기본 주소는 <code>http://127.0.0.1:12345/v1</code>입니다. BAT는 기존 프로젝트 데이터 경로를 지정합니다.</div></div></section>
+<section id="analysis"><h2>보충 내용 분석</h2><div class="table-wrap"><table><thead><tr><th>추가된 코드 영역</th><th>현재 동작</th><th>UI에서 보여줄 정보</th></tr></thead><tbody>
+<tr><td>계정·초기 관리자<br><code>app/auth.py</code><br><code>templates/login.html</code></td><td>인증 DB는 설교 DB와 분리됩니다. 최초 관리자 설정은 로그인 화면에서 제공되며, 초기 계정 생성 도구도 있습니다.</td><td>첫 실행 계정 설정 안내와 데이터베이스 분리 사실.</td></tr>
+<tr><td>Research Section Canary<br><code>app/routers/research.py</code></td><td>기능 플래그로 비활성화될 수 있고 현재 지원 범위는 structure입니다. 상태 조회는 읽기 전용이며, 사전 확인은 관리자 권한의 dry-run·approval-check입니다.</td><td>기본 비활성 상태와 읽기 전용·관리자 제한을 분명히 표기.</td></tr>
+<tr><td>협업·검토 역할<br><code>app/application/collaboration_service.py</code></td><td>작성자·검토자·승인자를 서로 다른 로컬 계정에 배정하고 설교 revision별로 검토와 최종 잠금을 적용합니다.</td><td>로컬 계정 범위, revision별 역할 검토, 외부 서비스 대기.</td></tr>
+<tr><td>RAG 품질·프로젝트 작업흐름<br><code>app/rag/quality.py</code><br><code>app/services/project_dashboard_presenter.py</code></td><td>검색 품질 평가 기준과 작업 흐름 요약이 추가되어 있습니다.</td><td>세부 구현을 복제하지 않고 요약 대시보드에서 존재를 안내.</td></tr>
+</tbody></table></div><p class="muted">[관련자료참고] 검증 대기, 인용·라이선스 확인, 관리자 검토 게이트는 기존 화면과 KMC 운영 상태 영역에서 이미 다루므로 동일한 컨트롤을 새로 만들지 않았습니다.</p></section>
+<section id="layout"><h2>UI 반영과 레이아웃 검토</h2><div class="grid">
+<div class="panel"><h3>추가 위치</h3><p>기존 <code>workSummaryPanel</code>의 2열 요약 그리드에 “최근 보강된 기능과 범위” 카드 하나를 추가했습니다. 계정·기능 제한·협업 범위만 알리고, 별도 작업 버튼은 만들지 않았습니다.</p><p class="muted">파일: <code>templates/index.html</code></p></div>
+<div class="panel"><h3>레이아웃 충돌 확인</h3><p>기존 데스크톱 2열과 모바일 1열 규칙을 재사용합니다. 카드가 3개에서 4개가 되어 데스크톱에서 2×2로 정렬되고, 760px 이하에서는 한 열로 쌓입니다.</p><p class="muted">전역 CSS·메뉴·작성 폼·세부 패널 구조는 바꾸지 않았습니다.</p></div>
+<div class="panel"><h3>실행 상태 구분</h3><p>Research Canary는 무조건 실행되는 기능처럼 설명하지 않고, 기본 비활성·현재 Section 범위·관리자 점검으로 구분했습니다. 상세 버튼은 기존 본문 연구 패널에 유지됩니다.</p></div>
+<div class="panel"><h3>협업 범위 구분</h3><p>역할 기능은 로컬 계정 기준입니다. API·인증·프로젝트 소유권 계약이 확인되지 않은 외부 말씀길 연동은 대기 상태라고 표시합니다.</p></div>
+</div></section>
+<section id="verify"><h2>검증 결과</h2><div class="grid">
+<div class="panel"><h3>프로그램 검증</h3><ul><li>관련 UI·버전 테스트 31 passed.</li><li>전체 테스트 599 passed, 19 skipped, 7 subtests passed (108.92초).</li><li>compileall 통과, PDF 엔진 ReportLab / NanumSquare 확인.</li><li>빌드 EXE와 최종 파일의 <code>--version</code> 결과 V40.9.15.</li></ul></div>
+<div class="panel"><h3>산출물 검증 범위</h3><ul><li>최종 EXE 크기 71,552,818 bytes; SHA-256 기록.</li><li>Windows 11 / Python 3.14.6 빌드. Windows 10 실기동 확인은 별도 수행하지 않았습니다.</li><li>LM Studio 연결 설교 생성은 이번 UI 보강 검증에 포함하지 않았습니다.</li></ul></div>
+</div><div class="caution" style="margin-top:14px"><strong>기존 작업 보호:</strong> 보완 시작 때 Git 작업 트리에 261개 변경·미추적 경로가 있었습니다. 이 작업에서 기존 사용자 데이터와 구버전 산출물을 삭제하지 않았으며, 커밋·태그는 만들지 않았습니다.</div></section>
+<section id="baseline"><h2>향후 기준</h2><div class="panel"><p>제품 버전은 <code>VERSION.txt</code>에서 관리하고, 모든 후속 작업은 V40.9.15 기준 소스와 <code>FINAL_PROGRAM_BASELINE.md</code>를 따릅니다. 신규 기능을 추가할 때는 현재 상세 패널과 API 계약을 먼저 확인하고, 요약 UI는 기존 흐름을 보완하는 용도로만 확장합니다.</p><p class="path">현재 UI 소스 · templates/index.html<br>현재 버전 원본 · VERSION.txt<br>버전별 릴리스 · release/V40.9.15/</p></div></section>
+</main>
+<footer class="footer"><div class="wrap">성경 근거 설교 작성기 · LM Studio Edition · V40.9.15 · 2026-10-11</div></footer>
+</body></html>

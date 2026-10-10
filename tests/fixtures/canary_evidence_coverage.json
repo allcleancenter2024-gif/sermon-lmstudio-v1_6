@@ -1,0 +1,36 @@
+{
+  "claims": [
+    {
+      "id": "claim-fixture-1",
+      "section_id": "structure",
+      "statement": "비식별 fixture 본문 구조 주장은 source-1을 참조한다.",
+      "claim_type": "interpretation",
+      "source_ids": ["source-1"],
+      "confidence": 0.9,
+      "verification_status": "verified"
+    },
+    {
+      "id": "claim-fixture-2",
+      "section_id": "verse_commentary",
+      "statement": "비식별 fixture 주석 주장은 source-2를 참조한다.",
+      "claim_type": "commentary",
+      "source_ids": ["source-2"],
+      "confidence": 0.7,
+      "verification_status": "partially_verified"
+    }
+  ],
+  "sources": [
+    {
+      "id": "source-1",
+      "reference": "fixture-ref-1",
+      "citation": "Fixture Source One",
+      "license_status": "approved"
+    },
+    {
+      "id": "source-2",
+      "reference": "fixture-ref-2",
+      "source_name": "Fixture Source Two",
+      "license_note": "test-only approved fixture"
+    }
+  ]
+}

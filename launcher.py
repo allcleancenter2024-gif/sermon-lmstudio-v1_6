@@ -11,6 +11,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from pathlib import Path
 
 import uvicorn
 
@@ -23,6 +24,7 @@ APP_URL = "http://127.0.0.1:8000"
 RUNTIME_URL = APP_URL + "/api/runtime"
 APP_PORT = 8000
 PORT_SEARCH_LIMIT = 20
+RESEARCH_CANARY_ENABLE_ARG = "--enable-research-canary"
 
 
 def _version_tuple(value: str) -> tuple[int, int, int] | None:
@@ -189,6 +191,22 @@ def _prepare_lmstudio_server() -> None:
         print(f"LM Studio [ACTION]: 자동 시작 점검 실패: {exc}")
 
 
+def _prepare_research_canary(argv: list[str] | None = None) -> bool:
+    """Enable the canary only after a rehearsal and explicit CLI opt-in."""
+    args = sys.argv[1:] if argv is None else list(argv)
+    if RESEARCH_CANARY_ENABLE_ARG not in args:
+        return False
+    from app.main import DB_PATH
+    from scripts.rehearse_research_canary_activation import rehearse_activation
+
+    result = rehearse_activation(Path(DB_PATH))
+    if not result.get("ok") or not result.get("source_unchanged"):
+        raise RuntimeError("Research Canary rehearsal을 통과하지 못해 활성화를 중단합니다.")
+    os.environ["RESEARCH_SECTION_CANARY"] = "true"
+    print("Research Canary: explicit opt-in after rehearsal; emergency off = RESEARCH_SECTION_CANARY=false")
+    return True
+
+
 def main() -> int:
     global APP_PORT, APP_URL, RUNTIME_URL
 
@@ -204,9 +222,18 @@ def main() -> int:
         print(f"User data: {result.get('user_data_root', '')}")
         print(f"LM Studio: {result.get('lmstudio_url', '')}")
         return 0 if result.get("ready_for_generation") else 4
+    try:
+        research_canary_requested = _prepare_research_canary()
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"Research Canary [OFF]: {exc}")
+        return 7
     runtime = _runtime_info()
     running = str(runtime.get("app_version") or "") if _is_sermon_runtime(runtime) else None
     if running == APP_VERSION:
+        if research_canary_requested:
+            print("Research Canary [OFF]: same-version server is already running; no existing process was terminated.")
+            print("Stop the verified current server, then rerun with --enable-research-canary.")
+            return 8
         print(f"Sermon LM Studio V{APP_VERSION} is already running. Opening browser...")
         webbrowser.open(APP_URL)
         return 0

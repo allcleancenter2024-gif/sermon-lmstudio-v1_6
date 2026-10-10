@@ -67,4 +67,4 @@ WORLD_AFFAIRS_RE = re.compile(r"(전쟁|국가|민족|정부|진영|국제\s*질
 DIVINE_CERTAINTY_RE = re.compile(r"(하나님의\s*(?:숨은\s*)?뜻|하나님의\s*심판|예언의\s*성취|하나님(?:께서|이)\s*.{0,20}(?:벌하|택하|지지하|승리하게))")
 NEUTRALITY_DISCLAIMER_RE = re.compile(r"(아니|않|말아야|해서는\s*안|금지|지양|피해야|경계해야|단정할\s*수\s*없)")
 
-REVIEW_STATUSES = {"comment", "changes_requested", "approved"}
+REVIEW_STATUSES = {"comment", "changes_requested", "reviewed", "approved"}

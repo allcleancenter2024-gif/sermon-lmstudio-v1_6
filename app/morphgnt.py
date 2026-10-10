@@ -132,7 +132,17 @@ def ensure_greek_nt_token_table(db_path: Path = DB_PATH) -> None:
 
 
 def import_morphgnt_directory(root: Path = MORPHGNT_ROOT, db_path: Path = DB_PATH, derived_path: Path | None = None, persist: bool = True) -> dict:
-    root, derived_path = Path(root), derived_path or DATA_DIR / "bible" / "greek" / "derived" / "greek_nt_tokens.jsonl"
+    root, db_path = Path(root), Path(db_path)
+    if derived_path is None:
+        # Keep the production artifact path stable, but isolate callers that
+        # provide a custom database (tests, previews, migrations) from the
+        # shared user data directory.
+        default_db = Path(DB_PATH).resolve()
+        derived_path = (
+            DATA_DIR / "bible" / "greek" / "derived" / "greek_nt_tokens.jsonl"
+            if db_path.resolve() == default_db
+            else db_path.with_name(f"{db_path.stem}.greek_nt_tokens.jsonl")
+        )
     files = sorted(root.glob("*-morphgnt.txt"))
     if {p.name for p in files} != set(MORPHGNT_FILES):
         raise ValueError(f"MorphGNT 27개 파일이 필요합니다. 현재 {len(files)}개가 감지되었습니다.")

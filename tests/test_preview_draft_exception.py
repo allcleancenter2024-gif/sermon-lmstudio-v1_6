@@ -58,15 +58,16 @@ def test_optimization_status_is_visible_in_both_project_panels():
     html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
     js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
 
-    assert "[2026-09-04 운영 안정화 작업 완료]" in html
-    assert "<b>441</b>" in html
+    assert "[2026-10-11 보완]" in html
+    assert "최근 보강된 기능과 범위" in html
+    assert "<b>599</b>" in html
     assert 'id="workspacePanel"' in html
     assert 'id="workspaceCards"' in html
     assert "installGuidePanel" in html
-    assert "정상상태 복구" in html
+    assert "restore_known_good.ps1" in html
     assert "generationProgressEta" in html
     assert "outlineProgressEta" in html
     assert "ragProgressEta" in html
     assert "formatProgressEta" in js
-    assert "optimizedWorkSummaryMarkdown" in js
-    assert "sermon-lmstudio-work-summary-v40.9.10.md" in js
+    assert "외부 말씀길 API 연동: 계약 확인 대기" in js
+    assert "function verifiedWorkSummaryMarkdown()" in js

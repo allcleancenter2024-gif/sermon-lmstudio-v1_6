@@ -1,7 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('templates', 'templates'), ('static', 'static'), ('fonts', 'fonts')]
+product_version = Path("VERSION.txt").read_text(encoding="utf-8").strip()
+
+datas = [('templates', 'templates'), ('static', 'static'), ('fonts', 'fonts'), ('app/assets/hwpx_base', 'app/assets/hwpx_base'), ('VERSION.txt', '.')]
 binaries = []
 hiddenimports = ['app.providers.web']
 tmp_ret = collect_all('uvicorn')
@@ -31,7 +34,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='SermonLMStudio',
+    name=f'SermonLMStudio_V{product_version}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

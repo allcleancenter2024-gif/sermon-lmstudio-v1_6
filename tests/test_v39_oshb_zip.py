@@ -5,6 +5,7 @@ import zipfile
 from pathlib import Path
 
 from app import main
+from app.version import APP_VERSION
 from app.core import import_original_note_batches, original_notes
 from app.importers import iter_oshb_zip_original_files
 
@@ -30,7 +31,7 @@ def make_zip(name="morphhb/wlc/Gen.xml", content=OSHB_XML):
 
 class V39OshbZipTests(unittest.TestCase):
     def test_current_version(self):
-        self.assertEqual(main.APP_VERSION, "40.9.10")
+        self.assertEqual(main.APP_VERSION, APP_VERSION)
 
     def test_reads_wlc_xml_from_distribution_zip(self):
         books = list(iter_oshb_zip_original_files(make_zip()))

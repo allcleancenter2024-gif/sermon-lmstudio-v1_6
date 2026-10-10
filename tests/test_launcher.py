@@ -36,6 +36,26 @@ class LauncherSafetyTests(unittest.TestCase):
         self.assertEqual(launcher._version_tuple("V40"), (40, 0, 0))
         self.assertIsNone(launcher._version_tuple("unknown"))
 
+    def test_research_canary_requires_explicit_opt_in_and_rehearsal(self):
+        with patch.dict(launcher.os.environ, {}, clear=True), patch("launcher.sys.argv", ["launcher.py"]):
+            self.assertFalse(launcher._prepare_research_canary())
+            self.assertNotIn("RESEARCH_SECTION_CANARY", launcher.os.environ)
+        with patch.dict(launcher.os.environ, {}, clear=True), patch("launcher.sys.argv", ["launcher.py", "--enable-research-canary"]), patch(
+            "scripts.rehearse_research_canary_activation.rehearse_activation",
+            return_value={"ok": True, "source_unchanged": True},
+        ):
+            self.assertTrue(launcher._prepare_research_canary())
+            self.assertEqual(launcher.os.environ["RESEARCH_SECTION_CANARY"], "true")
+
+    def test_research_canary_does_not_enable_after_failed_rehearsal(self):
+        with patch.dict(launcher.os.environ, {}, clear=True), patch("launcher.sys.argv", ["launcher.py", "--enable-research-canary"]), patch(
+            "scripts.rehearse_research_canary_activation.rehearse_activation",
+            return_value={"ok": False, "source_unchanged": True},
+        ):
+            with self.assertRaises(RuntimeError):
+                launcher._prepare_research_canary()
+            self.assertNotIn("RESEARCH_SECTION_CANARY", launcher.os.environ)
+
     def test_unverified_port_is_never_terminated(self):
         with (
             patch("launcher._runtime_info", return_value=None),
@@ -56,6 +76,16 @@ class LauncherSafetyTests(unittest.TestCase):
             self.assertEqual(launcher.main(), 0)
             open_browser.assert_called_once_with(launcher.APP_URL)
             stop_pid.assert_not_called()
+
+    def test_canary_opt_in_never_reuses_same_version_server(self):
+        runtime = self._runtime(launcher.APP_VERSION)
+        with (
+            patch("launcher._prepare_research_canary", return_value=True),
+            patch("launcher._runtime_info", return_value=runtime),
+            patch("launcher.webbrowser.open") as open_browser,
+        ):
+            self.assertEqual(launcher.main(), 8)
+            open_browser.assert_not_called()
 
     def test_listener_change_after_confirmation_aborts_termination(self):
         with (
@@ -107,7 +137,11 @@ class LauncherSafetyTests(unittest.TestCase):
         self.assertIn('VERSION.txt', run_v40)
         self.assertIn('call start.bat', run_v40)
         build = (root / "build_windows.bat").read_text(encoding="utf-8")
-        self.assertNotIn('for /f', build.lower())
+        self.assertIn('for /f', build.lower())
+        self.assertIn('VERSION.txt', build)
+        self.assertIn('SermonLMStudio_V%EXPECTED_VERSION%', build)
+        self.assertIn('BUILD_CANDIDATE=SermonLMStudio_V%EXPECTED_VERSION%_candidate', build)
+        self.assertIn('move /y "%RELEASE_DIR%\\%BUILD_CANDIDATE%.exe" "%RELEASE_DIR%\\%BUILD_ARTIFACT%.exe"', build)
         self.assertIn('--collect-all reportlab', build)
         self.assertIn('--exclude-module weasyprint', build)
 

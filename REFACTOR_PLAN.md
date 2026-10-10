@@ -1,21 +1,21 @@
 # REFACTOR_PLAN.md
-# Sermon LM Studio V40.9.1 단계별 리팩터링 계획
+# Sermon LM Studio V40.9.15 단계별 리팩터링 계획
 
 ## 1. 현재 판단
 
 현재 프로그램은 기능적으로 상당히 안정되어 있으며,
-자동 테스트 212개가 통과하는 상태다.
+전체 테스트 599 passed, 19 skipped 기준선을 통과하는 상태다.
 
 가장 큰 문제는 기능 부족이 아니라 구조적 복잡성이다.
 
 주요 복잡도:
 
-- app/core.py 약 2,893줄
-- app/main.py 약 1,644줄
+- app/core.py 약 2,018줄
+- app/main.py 약 1,995줄
 - API Route 집중
 - DB/RAG/Provider/Prompt/설교 생성 로직이 core.py에 집중
 - 장시간 AI 생성이 HTTP 요청 생명주기에 묶임
-- Hybrid RAG의 lexical 부분이 단순 LIKE 중심
+- Hybrid RAG의 lexical·semantic 결합 품질과 근거형 질문 평가를 지속 측정할 필요가 있음
 
 ---
 
@@ -45,7 +45,7 @@ refactor/v40-modularization
 완료 조건:
 
 ```text
-212 passed
+599 passed, 19 skipped
 ```
 
 ---

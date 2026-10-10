@@ -25,3 +25,13 @@ def test_project_summary_implementation_is_behind_the_application_boundary():
 
     assert "def summary()" in facade
     assert "build_project_summary(RESOURCE_ROOT, APP_VERSION)" in facade
+
+
+def test_project_facade_uses_project_repository_for_metadata_operations():
+    facade = (ROOT / "app" / "application" / "project_facade.py").read_text(encoding="utf-8")
+
+    assert "from app.repositories.project import" in facade
+    assert "fetch_project_dashboard_inputs" in facade
+    assert "get_project_meta" in facade
+    assert "list_sermons" in facade
+    assert "update_project_meta" in facade

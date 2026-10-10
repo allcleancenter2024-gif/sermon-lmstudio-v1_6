@@ -16,11 +16,177 @@ OSHB_DEDUPLICATION_ID = "oshb_original_dedup_v1"
 LICENSE_REVIEW_MIGRATION_ID = "doctrine_source_license_review_v1"
 PHASE1_DATA_MODEL_MIGRATION_ID = "doctrine_phase1_data_model_v2"
 PHASE2_INGESTION_MIGRATION_ID = "doctrine_phase2_secure_ingestion_v1"
+RESEARCH_SECTIONS_MIGRATION_ID = "sermon_research_sections_canary_v1"
+SERMON_COLLABORATION_MIGRATION_ID = "sermon_collaboration_assignments_v1"
 TABLES = (
     "doctrine_embeddings_v2", "doctrine_chunks_v2", "doctrine_index_versions",
     "ingestion_jobs", "source_snapshots", "doctrine_documents",
     "doctrine_sources", "denominations",
 )
+
+
+def apply_sermon_collaboration_migration(db_path: Path) -> dict:
+    """Add role assignments and append-only assignment history.
+
+    This additive migration deliberately does not assign legacy sermons to an
+    account and is never called by ``init_db``. Apply it only through an
+    explicit, backed-up activation procedure.
+    """
+    db_path = Path(db_path)
+    if not db_path.is_file():
+        raise FileNotFoundError("기존 설교 DB가 없어 migration을 적용하지 않습니다.")
+    with closing(sqlite3.connect(db_path)) as con, con:
+        con.execute("PRAGMA foreign_keys=ON")
+        if not con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sermons'"
+        ).fetchone():
+            raise RuntimeError("sermons 테이블이 없어 collaboration migration을 적용할 수 없습니다.")
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations "
+            "(migration_id TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
+        if con.execute(
+            "SELECT 1 FROM schema_migrations WHERE migration_id=?",
+            (SERMON_COLLABORATION_MIGRATION_ID,),
+        ).fetchone():
+            return {"migration_id": SERMON_COLLABORATION_MIGRATION_ID, "applied": False}
+        con.executescript(
+            """
+            CREATE TABLE sermon_collaboration_assignments (
+                sermon_id INTEGER PRIMARY KEY REFERENCES sermons(id) ON DELETE CASCADE,
+                author_id TEXT NOT NULL,
+                reviewer_id TEXT NOT NULL,
+                approver_id TEXT NOT NULL,
+                revision INTEGER NOT NULL CHECK(revision > 0),
+                assigned_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                CHECK(trim(author_id) <> '' AND trim(reviewer_id) <> '' AND trim(approver_id) <> ''),
+                CHECK(author_id <> reviewer_id AND author_id <> approver_id AND reviewer_id <> approver_id)
+            );
+            CREATE TABLE sermon_collaboration_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sermon_id INTEGER NOT NULL REFERENCES sermons(id) ON DELETE CASCADE,
+                assignment_revision INTEGER NOT NULL CHECK(assignment_revision > 0),
+                actor_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                details_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX idx_sermon_collab_author ON sermon_collaboration_assignments(author_id, sermon_id);
+            CREATE INDEX idx_sermon_collab_reviewer ON sermon_collaboration_assignments(reviewer_id, sermon_id);
+            CREATE INDEX idx_sermon_collab_approver ON sermon_collaboration_assignments(approver_id, sermon_id);
+            CREATE INDEX idx_sermon_collab_events_version ON sermon_collaboration_events(sermon_id, assignment_revision, id);
+            """
+        )
+        con.execute(
+            "INSERT INTO schema_migrations(migration_id, applied_at) VALUES(?, datetime('now'))",
+            (SERMON_COLLABORATION_MIGRATION_ID,),
+        )
+    return {"migration_id": SERMON_COLLABORATION_MIGRATION_ID, "applied": True}
+
+
+def rollback_sermon_collaboration_migration(db_path: Path) -> dict:
+    """Rollback only an unused collaboration schema; preserve populated history."""
+    with closing(sqlite3.connect(db_path)) as con, con:
+        marker = con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
+        ).fetchone()
+        if not marker or not con.execute(
+            "SELECT 1 FROM schema_migrations WHERE migration_id=?",
+            (SERMON_COLLABORATION_MIGRATION_ID,),
+        ).fetchone():
+            return {"migration_id": SERMON_COLLABORATION_MIGRATION_ID, "rolled_back": False}
+        for table in ("sermon_collaboration_events", "sermon_collaboration_assignments"):
+            if con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]:
+                raise RuntimeError("협업 배정 또는 감사 이력이 있어 자동 rollback할 수 없습니다. DB 백업 복원을 사용하세요.")
+        con.execute("DROP INDEX IF EXISTS idx_sermon_collab_events_version")
+        con.execute("DROP INDEX IF EXISTS idx_sermon_collab_approver")
+        con.execute("DROP INDEX IF EXISTS idx_sermon_collab_reviewer")
+        con.execute("DROP INDEX IF EXISTS idx_sermon_collab_author")
+        con.execute("DROP TABLE sermon_collaboration_events")
+        con.execute("DROP TABLE sermon_collaboration_assignments")
+        con.execute(
+            "DELETE FROM schema_migrations WHERE migration_id=?",
+            (SERMON_COLLABORATION_MIGRATION_ID,),
+        )
+    return {"migration_id": SERMON_COLLABORATION_MIGRATION_ID, "rolled_back": True}
+
+
+def apply_research_sections_migration(db_path: Path) -> dict:
+    """Add only the versioned Section table for the gated research canary.
+
+    This function is intentionally not called by ``init_db``.  Production
+    activation requires a separate backup and approval gate.
+    """
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    with closing(sqlite3.connect(db_path)) as con, con:
+        con.execute("PRAGMA foreign_keys=ON")
+        con.execute("CREATE TABLE IF NOT EXISTS schema_migrations (migration_id TEXT PRIMARY KEY, applied_at TEXT NOT NULL)")
+        if con.execute(
+            "SELECT 1 FROM schema_migrations WHERE migration_id=?",
+            (RESEARCH_SECTIONS_MIGRATION_ID,),
+        ).fetchone():
+            return {"migration_id": RESEARCH_SECTIONS_MIGRATION_ID, "applied": False}
+        con.executescript(
+            """
+            CREATE TABLE sermon_sections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL REFERENCES sermons(id) ON DELETE CASCADE,
+                section_type TEXT NOT NULL,
+                version INTEGER NOT NULL CHECK(version > 0),
+                status TEXT NOT NULL CHECK(status IN (
+                    'not_generated','generating','ready','insufficient_evidence',
+                    'needs_review','approved','failed'
+                )),
+                content_json TEXT NOT NULL DEFAULT '{}',
+                source_coverage REAL NOT NULL DEFAULT 0 CHECK(source_coverage >= 0 AND source_coverage <= 1),
+                quality_status TEXT NOT NULL DEFAULT 'not_checked' CHECK(quality_status IN (
+                    'not_checked','passed','warning','failed'
+                )),
+                review_status TEXT NOT NULL DEFAULT 'unreviewed' CHECK(review_status IN (
+                    'unreviewed','in_review','changes_requested','approved'
+                )),
+                source_snapshot_id TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(project_id, section_type, version)
+            );
+            CREATE INDEX idx_sermon_sections_project_type
+              ON sermon_sections(project_id, section_type, version DESC);
+            CREATE INDEX idx_sermon_sections_status
+              ON sermon_sections(status, review_status, quality_status);
+            """
+        )
+        con.execute(
+            "INSERT INTO schema_migrations(migration_id, applied_at) VALUES(?, datetime('now'))",
+            (RESEARCH_SECTIONS_MIGRATION_ID,),
+        )
+    return {"migration_id": RESEARCH_SECTIONS_MIGRATION_ID, "applied": True}
+
+
+def rollback_research_sections_migration(db_path: Path) -> dict:
+    """Remove the Canary table only when it contains no user data."""
+    with closing(sqlite3.connect(db_path)) as con, con:
+        con.execute("PRAGMA foreign_keys=ON")
+        marker = con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
+        ).fetchone()
+        if not marker or not con.execute(
+            "SELECT 1 FROM schema_migrations WHERE migration_id=?",
+            (RESEARCH_SECTIONS_MIGRATION_ID,),
+        ).fetchone():
+            return {"migration_id": RESEARCH_SECTIONS_MIGRATION_ID, "rolled_back": False}
+        if con.execute("SELECT COUNT(*) FROM sermon_sections").fetchone()[0]:
+            raise RuntimeError("연구 Section 데이터가 존재하여 자동 rollback할 수 없습니다. DB 백업 복원을 사용하세요.")
+        con.execute("DROP INDEX IF EXISTS idx_sermon_sections_status")
+        con.execute("DROP INDEX IF EXISTS idx_sermon_sections_project_type")
+        con.execute("DROP TABLE sermon_sections")
+        con.execute(
+            "DELETE FROM schema_migrations WHERE migration_id=?",
+            (RESEARCH_SECTIONS_MIGRATION_ID,),
+        )
+    return {"migration_id": RESEARCH_SECTIONS_MIGRATION_ID, "rolled_back": True}
 
 
 def apply_migrations(db_path: Path) -> dict:

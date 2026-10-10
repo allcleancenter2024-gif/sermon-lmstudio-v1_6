@@ -1,4 +1,4 @@
-/* V40.9.10 design tokens: semantic aliases for the existing study-room palette. */
+/* Semantic design tokens for the study-room palette. */
 :root {
   --color-primary: #18324a;
   --color-action: #2f6f8f;

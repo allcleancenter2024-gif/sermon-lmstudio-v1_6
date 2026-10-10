@@ -7,15 +7,18 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from app.constants import RECOMMENDED_GENERATION_MODELS, recommended_generation_model
 from app.version import APP_VERSION
+from app.config import get_lmstudio_url, set_lmstudio_url
 from app.application.project_facade import ProjectValidationError, dashboard as project_dashboard_facade, detail as project_detail_facade, save_detail as save_project_detail_facade, workflow as project_workflow_facade, workflow_config as project_workflow_config_facade
 from app.application.workflow_jobs import GenerationJobAdapter
 from app.application.job_registry import cancel_job
+from app.application.canary_builders import StructureBuilder
+from app.application.research_section_service import ResearchSectionService
 
 from app.core import (
     DB_PATH,
@@ -82,8 +85,6 @@ from app.core import (
     sermon_review_state,
     search_passages,
     validate_quotes,
-    get_lmstudio_url,
-    set_lmstudio_url,
 )
 from app.importers import MAX_ZIP_UPLOAD_BYTES, SUPPORTED_SOURCE_FORMATS, classify_original_language_source, convert_bible_source, convert_original_note_source, convert_lexicon_source, convert_usfm_zip, iter_oshb_zip_original_files
 from app.backup import BackupError, create_backup, list_backups, restore_backup
@@ -126,11 +127,17 @@ from app.routers.doctrine import router as doctrine_router
 from app.routers.bible import router as bible_router
 from app.routers.exports import router as exports_router
 from app.routers.auth import AuthRequest, build_auth_router
+from app.routers.research import build_research_router
+from app.routers.collaboration import build_collaboration_router
+from app.repositories.research_sections import ResearchSectionRepository
+from app.repositories.collaboration import SermonCollaborationRepository
 from app.lmstudio_control import find_lms_cli, local_api_port, port_is_open, start_local_server
 
 
 ROOT = RESOURCE_ROOT
 EXPORTS = EXPORTS_DIR
+AUTH_DISABLED = os.getenv("SERMON_AUTH_DISABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+AUTH_DB = USER_ROOT / "auth.sqlite3"
 init_db()
 
 init_notebooklm_db(DB_PATH)
@@ -141,10 +148,87 @@ app.include_router(projects_router)
 app.include_router(doctrine_router)
 app.include_router(bible_router)
 app.include_router(exports_router)
+research_section_repository = ResearchSectionRepository(DB_PATH)
+research_section_service = ResearchSectionService(
+    research_section_repository,
+    {
+        "structure": StructureBuilder(
+            lambda reference, related: build_passage_study(reference, related, DB_PATH)
+        )
+    },
+)
+app.include_router(build_research_router(research_section_service, research_section_repository, auth_db=AUTH_DB))
+collaboration_repository = SermonCollaborationRepository(DB_PATH)
+app.include_router(build_collaboration_router(
+    repository=collaboration_repository,
+    auth_db=AUTH_DB,
+    auth_enabled=not AUTH_DISABLED,
+))
+
+
+def _collaboration_assignment_for_workflow(sermon_id: int) -> dict | None:
+    """Return the explicit assignment, keeping old installations legacy-only.
+
+    Once the collaboration schema is installed, an unassigned sermon is denied
+    by the workflow endpoints below until an administrator maps its accounts.
+    Before migration, existing review/lock behavior remains untouched.
+    """
+    try:
+        assignment = collaboration_repository.get_assignment(sermon_id)
+    except RuntimeError as exc:
+        if "migration is required" in str(exc):
+            return None
+        raise
+    if assignment is None:
+        raise HTTPException(
+            409,
+            {"code": "collaboration_assignment_required", "message": "협업 담당자를 먼저 배정해야 합니다."},
+        )
+    return assignment
+
+
+def _require_collaboration_role(sermon_id: int, actor: str | None, role: str | None = None) -> dict | None:
+    if not actor:
+        raise HTTPException(401, {"code": "auth_required", "detail": "로그인이 필요합니다."})
+    assignment = _collaboration_assignment_for_workflow(sermon_id)
+    role_field = {"author": "author_id", "reviewer": "reviewer_id", "approver": "approver_id"}.get(role or "")
+    if assignment and role_field and actor != assignment[role_field]:
+        raise HTTPException(403, {"code": "collaboration_role_required", "detail": "배정된 역할만 이 설교 작업을 수행할 수 있습니다."})
+    return assignment
+
+
+def _require_collaboration_reader(sermon_id: int, actor: str | None) -> dict | None:
+    assignment = _require_collaboration_role(sermon_id, actor)
+    if assignment and actor not in {assignment["author_id"], assignment["reviewer_id"], assignment["approver_id"]} and not is_admin(AUTH_DB, actor):
+        raise HTTPException(404, {"code": "collaboration_access_denied", "detail": "배정 참여자 또는 관리자만 설교 자료를 조회할 수 있습니다."})
+    return assignment
+
+
+def _current_review_events(sermon_id: int, version: int, assignment: dict) -> list[dict]:
+    all_events = collaboration_repository.list_workflow_events(sermon_id, version=version)
+    current_events = [
+        item for item in all_events
+        if int(item["assignment_revision"]) == int(assignment["revision"])
+    ]
+    history = sermon_review_state(sermon_id, version).get("history", [])
+    if history and not current_events:
+        raise HTTPException(
+            409,
+            {"code": "new_version_required", "detail": "담당자 변경 또는 이전 검토 이력이 있습니다. 현재 담당자 승인용 새 버전을 만들어야 합니다."},
+        )
+    return current_events
+
+
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
-AUTH_DB = USER_ROOT / "auth.sqlite3"
-user_count(AUTH_DB)  # initialize the separate auth store without touching sermon DB
-app.include_router(build_auth_router(AUTH_DB))
+if not AUTH_DISABLED:
+    user_count(AUTH_DB)  # initialize the separate auth store without touching sermon DB
+    app.include_router(build_auth_router(AUTH_DB))
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Return an empty icon response without requiring an application session."""
+    return Response(status_code=204)
 
 PUBLIC_BIBLE_IMPORT_PRESETS = [
     {
@@ -190,9 +274,28 @@ PUBLIC_BIBLE_IMPORT_PRESETS = [
 async def runtime_identity_headers(request, call_next):
     # Runtime identity is intentionally public so the launcher can detect the
     # local server before opening the browser; application data APIs remain protected.
-    public = request.url.path in {"/", "/login", "/api/runtime", "/api/auth/status", "/api/auth/login", "/api/auth/register"} or request.url.path.startswith("/static/")
-    if not public and session_user(request.cookies.get("sermon_session")) is None:
+    public = request.url.path in {"/", "/login", "/favicon.ico", "/api/runtime", "/api/auth/status", "/api/auth/login", "/api/auth/register"} or request.url.path.startswith("/static/")
+    if not AUTH_DISABLED and not public and session_user(request.cookies.get("sermon_session")) is None:
         return JSONResponse({"detail": "로그인이 필요합니다.", "code": "auth_required"}, status_code=401)
+    path_parts = request.url.path.strip("/").split("/")
+    if (
+        not AUTH_DISABLED
+        and collaboration_repository.schema_ready()
+        and len(path_parts) >= 3
+        and path_parts[0] == "api"
+        and path_parts[1] in {"sermons", "projects"}
+        and path_parts[2].isdigit()
+    ):
+        actor = session_user(request.cookies.get("sermon_session"))
+        if not actor or not user_exists(AUTH_DB, actor):
+            return JSONResponse({"detail": "로그인이 필요합니다.", "code": "auth_required"}, status_code=401)
+        if not is_admin(AUTH_DB, actor):
+            try:
+                assignment = collaboration_repository.get_assignment(int(path_parts[2]))
+            except Exception:
+                return JSONResponse({"detail": "협업 권한을 확인할 수 없습니다.", "code": "collaboration_access_unavailable"}, status_code=503)
+            if not assignment or actor not in {assignment["author_id"], assignment["reviewer_id"], assignment["approver_id"]}:
+                return JSONResponse({"detail": "배정된 설교 참여자만 접근할 수 있습니다.", "code": "collaboration_access_denied"}, status_code=404)
     response = await call_next(request)
     response.headers["X-Sermon-App-Version"] = APP_VERSION
     if request.url.path == "/" or request.url.path.startswith("/static/"):
@@ -328,13 +431,16 @@ class SermonSaveRequest(BaseModel):
 
 
 class SermonReviewRequest(BaseModel):
-    reviewer: str = Field(min_length=1, max_length=100)
+    # Retained as an optional compatibility field. The server records the
+    # authenticated session user and never trusts this client-supplied value.
+    reviewer: str = Field(default="", max_length=100)
     status: str = Field(min_length=3, max_length=30)
     comment: str = Field(default="", max_length=5000)
 
 
 class SermonLockRequest(BaseModel):
-    locked_by: str = Field(min_length=1, max_length=100)
+    # Retained for old clients; lock attribution comes from the session.
+    locked_by: str = Field(default="", max_length=100)
 
 
 class RevisionSuggestionRequest(BaseModel):
@@ -592,7 +698,7 @@ def _preflight_result(data: PreflightRequest) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    if session_user(request.cookies.get("sermon_session")) is None:
+    if not AUTH_DISABLED and session_user(request.cookies.get("sermon_session")) is None:
         login_path = ROOT / "templates" / "login.html"
         if login_path.is_file():
             return login_path.read_text(encoding="utf-8")
@@ -1566,7 +1672,10 @@ def cancel_sermon_generation(request: Request):
 
 
 @app.post("/api/sermons/save")
-def save_sermon_version(data: SermonSaveRequest):
+def save_sermon_version(data: SermonSaveRequest, request: Request):
+    if data.sermon_id is not None:
+        actor = session_user(request.cookies.get("sermon_session"))
+        _require_collaboration_role(data.sermon_id, actor, "author")
     try:
         return {"ok": True, **save_sermon(data.topic, data.content, data.metadata, data.sermon_id)}
     except ValueError as exc:
@@ -1574,17 +1683,27 @@ def save_sermon_version(data: SermonSaveRequest):
 
 
 @app.get("/api/sermons/saved")
-def saved_sermons():
-    return {"items": list_sermons()}
+def saved_sermons(request: Request):
+    items = list_sermons()
+    if not AUTH_DISABLED and collaboration_repository.schema_ready():
+        actor = session_user(request.cookies.get("sermon_session"))
+        if actor and not is_admin(AUTH_DB, actor):
+            visible_ids = {int(item["sermon_id"]) for item in collaboration_repository.list_for_user(actor)}
+            items = [item for item in items if int(item["id"]) in visible_ids]
+    return {"items": items}
 
 
 @app.get("/api/sermons/{sermon_id}/versions")
-def saved_versions(sermon_id: int):
+def saved_versions(sermon_id: int, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_reader(sermon_id, actor)
     return {"sermon_id": sermon_id, "items": sermon_versions(sermon_id)}
 
 
 @app.get("/api/sermons/{sermon_id}/diff")
-def version_diff(sermon_id: int, a: int, b: int):
+def version_diff(sermon_id: int, a: int, b: int, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_reader(sermon_id, actor)
     try:
         return {"sermon_id": sermon_id, "a": a, "b": b, "diff": compare_sermon_versions(sermon_id, a, b)}
     except ValueError as exc:
@@ -1592,15 +1711,21 @@ def version_diff(sermon_id: int, a: int, b: int):
 
 
 @app.get("/api/audits/{audit_id}")
-def generation_audit(audit_id: int):
+def generation_audit(audit_id: int, request: Request):
     audit = get_generation_audit(audit_id)
     if not audit:
         raise HTTPException(404, "감사 기록을 찾을 수 없습니다.")
+    sermon_id = audit.get("sermon_id")
+    if sermon_id and collaboration_repository.schema_ready():
+        actor = session_user(request.cookies.get("sermon_session"))
+        _require_collaboration_reader(int(sermon_id), actor)
     return audit
 
 
 @app.get("/api/sermons/{sermon_id}/versions/{version}/reviews")
-def version_reviews(sermon_id: int, version: int):
+def version_reviews(sermon_id: int, version: int, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_reader(sermon_id, actor)
     versions = {item["version"] for item in sermon_versions(sermon_id)}
     if version not in versions:
         raise HTTPException(404, "설교 버전을 찾을 수 없습니다.")
@@ -1608,16 +1733,49 @@ def version_reviews(sermon_id: int, version: int):
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/reviews")
-def create_version_review(sermon_id: int, version: int, data: SermonReviewRequest):
+def create_version_review(sermon_id: int, version: int, data: SermonReviewRequest, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    if not actor:
+        raise HTTPException(401, {"code": "auth_required", "detail": "검토 기록에는 로그인 계정이 필요합니다."})
+    assignment = _collaboration_assignment_for_workflow(sermon_id)
+    if assignment:
+        versions = [int(item["version"]) for item in sermon_versions(sermon_id)]
+        if not versions or version != max(versions):
+            raise HTTPException(409, {"code": "latest_version_required", "detail": "최신 설교 버전만 검토할 수 있습니다."})
+        workflow_events = _current_review_events(sermon_id, version, assignment)
+        if data.status == "approved":
+            if actor != assignment["approver_id"]:
+                raise HTTPException(403, {"code": "approver_required", "detail": "최종 승인은 배정된 승인자만 할 수 있습니다."})
+            if not any(item["actor_id"] == assignment["reviewer_id"] and item["details"].get("status") == "reviewed" for item in workflow_events):
+                raise HTTPException(409, {"code": "review_required", "detail": "배정된 검토자가 같은 버전을 먼저 검토 완료해야 합니다."})
+            if any(item["actor_id"] == assignment["approver_id"] and item["details"].get("status") == "approved" for item in workflow_events):
+                raise HTTPException(409, {"code": "already_approved", "detail": "이 배정 revision에서 이미 승인한 버전입니다."})
+        else:
+            if actor != assignment["reviewer_id"]:
+                raise HTTPException(403, {"code": "reviewer_required", "detail": "검토 기록은 배정된 검토자만 남길 수 있습니다."})
+            if data.status not in {"comment", "changes_requested", "reviewed"}:
+                raise HTTPException(400, {"code": "review_status_invalid", "detail": "검토자는 승인 대신 검토 완료 또는 변경 요청을 남겨야 합니다."})
     try:
-        review = add_sermon_review(sermon_id, version, data.reviewer, data.status, data.comment)
+        review = add_sermon_review(sermon_id, version, actor, data.status, data.comment)
+        if assignment:
+            collaboration_repository.record_workflow_event(
+                sermon_id=sermon_id,
+                assignment_revision=int(assignment["revision"]),
+                actor_id=actor,
+                action="review_status",
+                version=version,
+                status=data.status,
+                review_created_at=review["created_at"],
+            )
         return {"ok": True, "review": review, **sermon_review_state(sermon_id, version)}
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/reaudit")
-def reaudit_version(sermon_id: int, version: int):
+def reaudit_version(sermon_id: int, version: int, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_role(sermon_id, actor, "author")
     try:
         audit = reaudit_sermon_version(sermon_id, version)
         return {"ok": True, "audit": audit, "citation_analysis": audit.get("citation_analysis", {}),
@@ -1627,16 +1785,33 @@ def reaudit_version(sermon_id: int, version: int):
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/lock")
-def lock_version(sermon_id: int, version: int, data: SermonLockRequest):
+def lock_version(sermon_id: int, version: int, data: SermonLockRequest, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    if not actor:
+        raise HTTPException(401, {"code": "auth_required", "detail": "최종 잠금에는 로그인 계정이 필요합니다."})
+    assignment = _collaboration_assignment_for_workflow(sermon_id)
+    if assignment:
+        versions = [int(item["version"]) for item in sermon_versions(sermon_id)]
+        if not versions or version != max(versions):
+            raise HTTPException(409, {"code": "latest_version_required", "detail": "최신 설교 버전만 최종 잠금할 수 있습니다."})
+        if actor != assignment["approver_id"]:
+            raise HTTPException(403, {"code": "approver_required", "detail": "최종 잠금은 배정된 승인자만 할 수 있습니다."})
+        events = _current_review_events(sermon_id, version, assignment)
+        has_review = any(item["actor_id"] == assignment["reviewer_id"] and item["details"].get("status") == "reviewed" for item in events)
+        has_approval = any(item["actor_id"] == assignment["approver_id"] and item["details"].get("status") == "approved" for item in events)
+        if not has_review or not has_approval:
+            raise HTTPException(409, {"code": "approval_chain_incomplete", "detail": "배정된 검토자의 검토 완료와 승인자의 승인이 필요합니다."})
     try:
-        lock = lock_sermon_version(sermon_id, version, data.locked_by)
+        lock = lock_sermon_version(sermon_id, version, actor)
         return {"ok": True, "lock": lock, **sermon_review_state(sermon_id, version)}
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
 
 
 @app.get("/api/sermons/{sermon_id}/versions/{version}/revision-suggestions")
-def list_revision_suggestions(sermon_id: int, version: int):
+def list_revision_suggestions(sermon_id: int, version: int, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_reader(sermon_id, actor)
     versions = {item["version"] for item in sermon_versions(sermon_id)}
     if version not in versions:
         raise HTTPException(404, "설교 버전을 찾을 수 없습니다.")
@@ -1644,7 +1819,9 @@ def list_revision_suggestions(sermon_id: int, version: int):
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/revision-suggestions")
-def create_revision_suggestions(sermon_id: int, version: int, data: RevisionSuggestionRequest):
+def create_revision_suggestions(sermon_id: int, version: int, data: RevisionSuggestionRequest, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_role(sermon_id, actor, "author")
     client = LMStudioClient()
     try:
         model, _ = _select_generation_model(client, data.model)
@@ -1657,7 +1834,9 @@ def create_revision_suggestions(sermon_id: int, version: int, data: RevisionSugg
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/apply-revisions")
-def apply_revisions(sermon_id: int, version: int, data: RevisionApplyRequest):
+def apply_revisions(sermon_id: int, version: int, data: RevisionApplyRequest, request: Request):
+    actor = session_user(request.cookies.get("sermon_session"))
+    _require_collaboration_role(sermon_id, actor, "author")
     try:
         return {"ok": True, **apply_revision_suggestions(sermon_id, version, data.suggestion_ids)}
     except ValueError as exc:
@@ -1665,7 +1844,18 @@ def apply_revisions(sermon_id: int, version: int, data: RevisionApplyRequest):
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/export-package")
-def export_final_package(sermon_id: int, version: int):
+def export_final_package(sermon_id: int, version: int, request: Request):
+    assignment = _collaboration_assignment_for_workflow(sermon_id)
+    if assignment:
+        actor = session_user(request.cookies.get("sermon_session"))
+        versions = [int(item["version"]) for item in sermon_versions(sermon_id)]
+        if actor != assignment["approver_id"]:
+            raise HTTPException(403, {"code": "approver_required", "detail": "최종 패키지 출력은 배정된 승인자만 할 수 있습니다."})
+        if not versions or version != max(versions):
+            raise HTTPException(409, {"code": "latest_version_required", "detail": "최신 승인 버전만 최종 패키지로 출력할 수 있습니다."})
+        workflow_events = _current_review_events(sermon_id, version, assignment)
+        if not any(item["actor_id"] == assignment["reviewer_id"] and item["details"].get("status") == "reviewed" for item in workflow_events) or not any(item["actor_id"] == assignment["approver_id"] and item["details"].get("status") == "approved" for item in workflow_events):
+            raise HTTPException(409, {"code": "approval_chain_incomplete", "detail": "현재 배정 revision에서 검토와 승인이 필요합니다."})
     version_item = next((item for item in sermon_versions(sermon_id) if item["version"] == version), None)
     if not version_item:
         raise HTTPException(404, "최종 패키지로 만들 설교 버전을 찾을 수 없습니다.")
@@ -1695,8 +1885,19 @@ def export_final_package(sermon_id: int, version: int):
 
 
 @app.post("/api/sermons/{sermon_id}/versions/{version}/export-hwpx")
-def export_final_hwpx(sermon_id: int, version: int):
+def export_final_hwpx(sermon_id: int, version: int, request: Request):
     """Export only an approved, integrity-checked final version as HWPX."""
+    assignment = _collaboration_assignment_for_workflow(sermon_id)
+    if assignment:
+        actor = session_user(request.cookies.get("sermon_session"))
+        versions = [int(item["version"]) for item in sermon_versions(sermon_id)]
+        if actor != assignment["approver_id"]:
+            raise HTTPException(403, {"code": "approver_required", "detail": "최종 HWPX 출력은 배정된 승인자만 할 수 있습니다."})
+        if not versions or version != max(versions):
+            raise HTTPException(409, {"code": "latest_version_required", "detail": "최신 승인 버전만 HWPX로 출력할 수 있습니다."})
+        workflow_events = _current_review_events(sermon_id, version, assignment)
+        if not any(item["actor_id"] == assignment["reviewer_id"] and item["details"].get("status") == "reviewed" for item in workflow_events) or not any(item["actor_id"] == assignment["approver_id"] and item["details"].get("status") == "approved" for item in workflow_events):
+            raise HTTPException(409, {"code": "approval_chain_incomplete", "detail": "현재 배정 revision에서 검토와 승인이 필요합니다."})
     version_item = next((item for item in sermon_versions(sermon_id) if item["version"] == version), None)
     if not version_item:
         raise HTTPException(404, "HWPX로 만들 설교 버전을 찾을 수 없습니다.")

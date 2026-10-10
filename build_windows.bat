@@ -2,7 +2,18 @@
 setlocal
 cd /d "%~dp0"
 
-set "EXPECTED_VERSION=40.9.10"
+for /f "usebackq delims=" %%V in ("VERSION.txt") do if not defined EXPECTED_VERSION set "EXPECTED_VERSION=%%V"
+if not defined EXPECTED_VERSION (
+  echo [ERROR] VERSION.txt is missing or empty.
+  pause
+  exit /b 9
+)
+set "BUILD_ARTIFACT=SermonLMStudio_V%EXPECTED_VERSION%"
+set "BUILD_CANDIDATE=SermonLMStudio_V%EXPECTED_VERSION%_candidate"
+set "RELEASE_DIR=release\V%EXPECTED_VERSION%"
+set "BUILD_WORK=.pyinstaller-work-release-%EXPECTED_VERSION%"
+set "PYTEST_TEMP=.pytest-release-%EXPECTED_VERSION%"
+if not exist "%RELEASE_DIR%" mkdir "%RELEASE_DIR%"
 
 echo [1/7] Preparing clean Windows build environment...
 if not exist ".build-venv\Scripts\python.exe" (
@@ -28,8 +39,8 @@ if errorlevel 1 goto :build_error
 echo [3/7] Running compile and regression checks before packaging...
 ".build-venv\Scripts\python.exe" -m compileall -q app scripts
 if errorlevel 1 goto :build_error
-if not exist ".pytest-build" mkdir ".pytest-build"
-".build-venv\Scripts\python.exe" -m pytest -q --basetemp=".pytest-build"
+if not exist "%PYTEST_TEMP%" mkdir "%PYTEST_TEMP%"
+".build-venv\Scripts\python.exe" -m pytest -q --basetemp="%PYTEST_TEMP%"
 if errorlevel 1 goto :build_error
 
 echo [4/7] Checking Windows PDF engine and Korean font...
@@ -40,13 +51,13 @@ if errorlevel 1 (
 )
 
 echo [5/7] Building SermonLMStudio.exe...
-if exist "dist\SermonLMStudio.exe" del /q "dist\SermonLMStudio.exe"
-".build-venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --console --name SermonLMStudio --collect-all uvicorn --collect-all reportlab --exclude-module weasyprint --hidden-import app.providers.web --add-data "templates;templates" --add-data "static;static" --add-data "fonts;fonts" launcher.py
+if exist "%RELEASE_DIR%\%BUILD_CANDIDATE%.exe" del /q "%RELEASE_DIR%\%BUILD_CANDIDATE%.exe"
+".build-venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --console --name "%BUILD_CANDIDATE%" --workpath "%BUILD_WORK%" --specpath "%BUILD_WORK%" --distpath "%RELEASE_DIR%" --runtime-tmpdir ".build-tmp" --collect-all uvicorn --collect-all reportlab --exclude-module weasyprint --hidden-import app.providers.web --add-data "%CD%\templates;templates" --add-data "%CD%\static;static" --add-data "%CD%\fonts;fonts" --add-data "%CD%\app\assets\hwpx_base;app\assets\hwpx_base" --add-data "%CD%\VERSION.txt;." launcher.py
 if errorlevel 1 goto :build_error
 
 echo [6/7] Verifying EXE and application version...
-if not exist "dist\SermonLMStudio.exe" goto :build_error
-"dist\SermonLMStudio.exe" --version > ".built-version.tmp"
+if not exist "%RELEASE_DIR%\%BUILD_CANDIDATE%.exe" goto :build_error
+"%RELEASE_DIR%\%BUILD_CANDIDATE%.exe" --version > ".built-version.tmp"
 if errorlevel 1 goto :build_error
 set /p BUILT_VERSION=<".built-version.tmp"
 del /q ".built-version.tmp" 2>nul
@@ -55,10 +66,14 @@ if not "%BUILT_VERSION%"=="%EXPECTED_VERSION%" (
   goto :build_error
 )
 
+move /y "%RELEASE_DIR%\%BUILD_CANDIDATE%.exe" "%RELEASE_DIR%\%BUILD_ARTIFACT%.exe" >nul
+if errorlevel 1 goto :build_error
+
 echo [7/7] Complete.
-echo EXE: %CD%\dist\SermonLMStudio.exe
-echo Run LM Studio, start Developer / Local Server, then double-click this EXE.
-echo For a command-line readiness report, run: dist\SermonLMStudio.exe --diagnose
+echo EXE: %CD%\%RELEASE_DIR%\%BUILD_ARTIFACT%.exe
+echo Run: %CD%\%RELEASE_DIR%\RUN_SermonLMStudio.bat
+echo Start the LM Studio local server before opening the app.
+echo For a command-line readiness report, run: %RELEASE_DIR%\%BUILD_ARTIFACT%.exe --diagnose
 pause
 exit /b 0
 

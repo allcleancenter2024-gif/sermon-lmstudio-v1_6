@@ -9,8 +9,10 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+import shutil
 import sqlite3
 from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 from time import time
 
@@ -53,6 +55,51 @@ def create_user(path: Path, username: str, password: str) -> bool:
         return False
 
 
+def create_initial_user(path: Path, username: str, password: str) -> bool:
+    """Create the first administrator atomically; never replace an account."""
+    username = username.strip().lower()
+    if not (3 <= len(username) <= 80 and 10 <= len(password) <= 256):
+        raise ValueError("사용자명은 3~80자, 비밀번호는 10자 이상이어야 합니다.")
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, ITERATIONS)
+    encoded = f"pbkdf2_sha256${ITERATIONS}${salt.hex()}${digest.hex()}"
+    with closing(_db(path)) as con, con:
+        if con.execute("SELECT 1 FROM users LIMIT 1").fetchone() is not None:
+            return False
+        con.execute(
+            "INSERT INTO users(username,password_hash,created_at,role) VALUES(?,?,?,?)",
+            (username, encoded, time(), "admin"),
+        )
+    return True
+
+
+def replace_users_with_admin(path: Path, username: str, password: str, backup_path: Path) -> dict[str, str | int]:
+    """Replace all local auth users after an explicit caller confirmation.
+
+    The caller must create/verify the backup destination policy. This function
+    itself copies the current SQLite file before the destructive transaction.
+    """
+    username = username.strip().lower()
+    if not (3 <= len(username) <= 80 and 10 <= len(password) <= 256):
+        raise ValueError("사용자명은 3~80자, 비밀번호는 10자 이상이어야 합니다.")
+    path, backup_path = Path(path), Path(backup_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"인증 DB가 없습니다: {path}")
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, backup_path)
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, ITERATIONS)
+    encoded = f"pbkdf2_sha256${ITERATIONS}${salt.hex()}${digest.hex()}"
+    with closing(_db(path)) as con, con:
+        previous = int(con.execute("SELECT COUNT(*) FROM users").fetchone()[0])
+        con.execute("DELETE FROM users")
+        con.execute(
+            "INSERT INTO users(username,password_hash,created_at,role) VALUES(?,?,?,?)",
+            (username, encoded, time(), "admin"),
+        )
+    return {"username": username, "replaced_users": previous, "backup": str(backup_path)}
+
+
 def verify_password(path: Path, username: str, password: str) -> bool:
     with closing(_db(path)) as con, con:
         row = con.execute("SELECT password_hash FROM users WHERE username=?", (username.strip().lower(),)).fetchone()
@@ -72,6 +119,25 @@ def is_admin(path: Path, username: str | None) -> bool:
     with closing(_db(path)) as con, con:
         row = con.execute("SELECT role FROM users WHERE username=?", (username.strip().lower(),)).fetchone()
     return bool(row and row[0] == "admin")
+
+
+def user_exists(path: Path, username: str | None) -> bool:
+    if not username:
+        return False
+    with closing(_db(path)) as con, con:
+        row = con.execute(
+            "SELECT 1 FROM users WHERE username=?",
+            (username.strip().lower(),),
+        ).fetchone()
+    return row is not None
+
+
+def list_users(path: Path) -> list[dict[str, str]]:
+    with closing(_db(path)) as con, con:
+        rows = con.execute(
+            "SELECT username, role FROM users ORDER BY username"
+        ).fetchall()
+    return [{"username": str(row[0]), "role": str(row[1])} for row in rows]
 
 
 def create_session(username: str) -> str:

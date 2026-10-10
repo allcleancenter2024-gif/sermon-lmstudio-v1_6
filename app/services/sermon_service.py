@@ -72,7 +72,10 @@ def generate_sermon_workflow(
     prompt_payload["reading_cpm"] = reading_cpm
     prompt_payload["outline"] = clean_outline
     web_evidence = list(web_evidence or [])
-    doctrine_prompt_notes = list(doctrine_notes or []) + [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence]
+    web_evidence_payloads = [
+        item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence
+    ]
+    doctrine_prompt_notes = list(doctrine_notes or []) + web_evidence_payloads
     system, user = build_sermon_prompt(prompt_payload, passages, word_notes, doctrine_prompt_notes)
     try:
         sermon = client.chat(model, system, user, max_tokens=_sermon_max_tokens(data.minutes, model))
@@ -143,7 +146,7 @@ def generate_sermon_workflow(
     evidence_trace = build_evidence_trace(
         sermon,
         list(passages) + list(word_notes) + list(doctrine_notes)
-        + [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence],
+        + web_evidence_payloads,
     )
     result = {
         "sermon": sermon,
@@ -170,8 +173,8 @@ def generate_sermon_workflow(
         "citation_trace_validation": evidence_trace["validation"],
     }
     if web_grounding_meta and web_grounding_meta.get("enabled"):
-        result["web_grounding"] = {**web_grounding_meta, "evidence": [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence]}
+        result["web_grounding"] = {**web_grounding_meta, "evidence": web_evidence_payloads}
     if os.getenv("GROUNDING_AUDIT_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}:
-        packet = list(passages) + list(word_notes) + list(doctrine_notes) + [item.as_dict() if hasattr(item, "as_dict") else item for item in web_evidence]
+        packet = list(passages) + list(word_notes) + list(doctrine_notes) + web_evidence_payloads
         result["grounding_audit"] = audit_sermon(sermon, packet).as_dict()
     return result
